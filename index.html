@@ -829,7 +829,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">2.20.1</span>
+        v<span id="appVersion">2.20.3</span>
       </div>
     </div>
   </aside>
@@ -2671,6 +2671,8 @@ function resetRowsToDefault(){
   document.getElementById('notesInput').value = '';
   document.getElementById('titleInput').value = chart.title;
   fitTitleFont();
+  refreshAutoGroupList();
+  refreshCustomGroupList();
   toast('Rows reset to default');
 }
 
@@ -3914,7 +3916,9 @@ async function refreshSavedList(){
       const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
       loadBtn.onclick = ()=>loadChart(key);
       const delBtn = document.createElement('button'); delBtn.textContent='✕'; delBtn.className='danger';
-      delBtn.onclick = ()=>deleteChart(key);
+      delBtn.onclick = ()=>{
+        showConfirm('Delete the saved chart "'+name+'"? This can\'t be undone.', 'Delete', ()=>deleteChart(key));
+      };
       const btns = document.createElement('div');
       btns.style.display='flex'; btns.style.gap='4px';
       btns.appendChild(loadBtn); btns.appendChild(delBtn);
