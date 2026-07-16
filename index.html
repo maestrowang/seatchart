@@ -829,7 +829,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">2.19.0</span>
+        v<span id="appVersion">2.20.1</span>
       </div>
     </div>
   </aside>
@@ -875,7 +875,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <p id="exportOptionsTitle">Export</p>
     <div class="meta-tag" style="display:block; margin-bottom:6px;">STYLE</div>
     <div id="exportOptionsList"></div>
-    <div class="meta-tag" style="display:block; margin:14px 0 6px;">QUALITY</div>
+    <div class="meta-tag" id="exportQualityLabel" style="display:block; margin:14px 0 6px;">QUALITY</div>
     <div id="exportQualityList"></div>
     <div class="btn-row" style="margin-top:14px;">
       <button id="exportOptionsCancelBtn">Cancel</button>
@@ -4417,19 +4417,32 @@ const EXPORT_QUALITY_OPTIONS = [
   { label: 'Very High (3x)', value: 3 },
 ];
 
-function showExportOptionsPrompt(title, styleOptions, onConfirm){
+function formatBytes(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+// sizeEstimator: optional (mode, scale) => number-of-bytes function. When provided,
+// each quality option shows an estimated file size for the CURRENTLY selected style,
+// computed by actually rendering at that quality (not a rough guess) -- recomputed
+// whenever the style selection changes, since color vs black & white compresses
+// differently. Omit entirely for dialogs that don't produce a downloadable file (Print).
+function showExportOptionsPrompt(title, styleOptions, onConfirm, sizeEstimator, showQuality){
+  if(showQuality === undefined) showQuality = true;
   const overlay = document.getElementById('exportOptionsOverlay');
   document.getElementById('exportOptionsTitle').textContent = title;
 
   let selectedStyle = styleOptions[0].value;
   let selectedScale = 3; // default to the highest quality, since low resolution was the reported problem
+  let sizeEstimateToken = 0; // guards against a stale async estimate overwriting a newer one
 
-  function renderGroup(container, opts, selectedValue, onPick){
+  function renderGroup(container, opts, selectedValue, onPick, labelSuffixes){
     container.innerHTML = '';
     opts.forEach(opt=>{
       const btn = document.createElement('button');
       btn.className = 'block' + (opt.value === selectedValue ? ' toggled' : '');
-      btn.textContent = opt.label;
+      btn.textContent = opt.label + (labelSuffixes && labelSuffixes[opt.value] ? labelSuffixes[opt.value] : '');
       btn.style.marginTop = '4px';
       btn.onclick = ()=>{ onPick(opt.value); };
       container.appendChild(btn);
@@ -4438,11 +4451,41 @@ function showExportOptionsPrompt(title, styleOptions, onConfirm){
 
   const styleList = document.getElementById('exportOptionsList');
   const qualityList = document.getElementById('exportQualityList');
+  const qualityLabel = document.getElementById('exportQualityLabel');
+  qualityLabel.style.display = showQuality ? 'block' : 'none';
+  qualityList.style.display = showQuality ? 'block' : 'none';
 
-  function redrawStyle(){ renderGroup(styleList, styleOptions, selectedStyle, (v)=>{ selectedStyle = v; redrawStyle(); }); }
-  function redrawQuality(){ renderGroup(qualityList, EXPORT_QUALITY_OPTIONS, selectedScale, (v)=>{ selectedScale = v; redrawQuality(); }); }
+  function redrawStyle(){
+    renderGroup(styleList, styleOptions, selectedStyle, (v)=>{ selectedStyle = v; redrawStyle(); updateSizeEstimates(); });
+  }
+  function redrawQuality(labelSuffixes){
+    if(!showQuality) return;
+    renderGroup(qualityList, EXPORT_QUALITY_OPTIONS, selectedScale, (v)=>{ selectedScale = v; redrawQuality(labelSuffixes); }, labelSuffixes);
+  }
+
+  function updateSizeEstimates(){
+    if(!sizeEstimator || !showQuality) return;
+    const myToken = ++sizeEstimateToken;
+    redrawQuality({ 1: ' -- estimating…', 2: ' -- estimating…', 3: ' -- estimating…' });
+    setTimeout(()=>{
+      if(myToken !== sizeEstimateToken) return; // a newer style selection superseded this
+      const suffixes = {};
+      EXPORT_QUALITY_OPTIONS.forEach(q=>{
+        try{
+          const bytes = sizeEstimator(selectedStyle, q.value);
+          suffixes[q.value] = ' -- ~' + formatBytes(bytes);
+        } catch(err){
+          suffixes[q.value] = '';
+        }
+      });
+      if(myToken !== sizeEstimateToken) return;
+      redrawQuality(suffixes);
+    }, 10);
+  }
+
   redrawStyle();
   redrawQuality();
+  updateSizeEstimates();
 
   overlay.classList.add('show');
   document.getElementById('exportOptionsCancelBtn').onclick = ()=> overlay.classList.remove('show');
@@ -4464,6 +4507,24 @@ document.getElementById('exportOptionsOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'exportOptionsOverlay') e.currentTarget.classList.remove('show');
 });
 
+// Estimates the actual output file size by really rendering at that quality/style --
+// not a rough guess, the genuine byte size of what toDataURL/jsPDF would produce.
+function estimatePngSizeBytes(mode, scale){
+  const out = composeExportCanvas(mode, scale);
+  const dataUrl = out.toDataURL('image/png');
+  const base64Length = dataUrl.length - (dataUrl.indexOf(',') + 1);
+  return Math.round(base64Length * 3/4); // decoded byte size from base64 length
+}
+
+function estimatePdfSizeBytes(mode, scale){
+  const out = composeExportCanvas(mode, scale);
+  const { jsPDF } = window.jspdf;
+  const orientation = out.width > out.height ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: [out.width, out.height] });
+  pdf.addImage(out.toDataURL('image/png'), 'PNG', 0, 0, out.width, out.height);
+  return pdf.output('blob').size;
+}
+
 document.getElementById('exportPng').onclick = ()=>{
   showExportOptionsPrompt('Download PNG', [
     { label: 'Digital – Full Color', value: 'screen' },
@@ -4473,7 +4534,7 @@ document.getElementById('exportPng').onclick = ()=>{
     const out = composeExportCanvas(mode, scale);
     downloadCanvasAsPng(out, (chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '.png');
     toast('PNG downloaded');
-  });
+  }, estimatePngSizeBytes);
 };
 
 document.getElementById('exportPdf').onclick = ()=>{
@@ -4489,7 +4550,7 @@ document.getElementById('exportPdf').onclick = ()=>{
     pdf.addImage(out.toDataURL('image/png'), 'PNG', 0, 0, out.width, out.height);
     pdf.save((chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '.pdf');
     toast('PDF downloaded');
-  });
+  }, estimatePdfSizeBytes);
 };
 
 document.getElementById('printChartBtn').onclick = ()=>{
@@ -4499,7 +4560,7 @@ document.getElementById('printChartBtn').onclick = ()=>{
   ], (mode, scale)=>{
     const out = composeExportCanvas(mode, scale);
     printCanvas(out);
-  });
+  }, null, false);
 };
 
 // ---------------- INIT ----------------
