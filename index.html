@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Seating Chart Studio</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -436,6 +435,7 @@
       <div class="btn-row">
         <button class="block" id="exportPng">Download PNG</button>
         <button class="block" id="exportPdf">Download PDF</button>
+        <button class="block" id="printChartBtn" style="margin-top:6px;">Print Chart</button>
       </div>
     </div>
 
@@ -458,7 +458,7 @@
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">2.13.0</span>
+        v<span id="appVersion">2.18.0</span>
       </div>
     </div>
   </aside>
@@ -498,6 +498,21 @@
     </div>
   </div>
 </div>
+
+<div class="confirm-overlay" id="exportOptionsOverlay">
+  <div class="confirm-box" style="max-width:340px;">
+    <p id="exportOptionsTitle">Export</p>
+    <div class="meta-tag" style="display:block; margin-bottom:6px;">STYLE</div>
+    <div id="exportOptionsList"></div>
+    <div class="meta-tag" style="display:block; margin:14px 0 6px;">QUALITY</div>
+    <div id="exportQualityList"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button id="exportOptionsCancelBtn">Cancel</button>
+      <button id="exportOptionsConfirmBtn" class="primary">Export</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ---------------- DATA ----------------
@@ -630,8 +645,57 @@ let groupDragMoved = false;
 let groupDragMouseStart = null;
 let groupDragStartPositions = null;
 
-const canvas = document.getElementById('chart');
-const ctx = canvas.getContext('2d');
+let canvas = document.getElementById('chart');
+let ctx = canvas.getContext('2d');
+let exportRenderOptions = null; // { whiteBg, skipGrid } while rendering for export/print; null for normal on-screen rendering
+
+// window.storage only exists inside Claude's own artifact-preview sandbox -- it is NOT
+// a standard browser API, so opening this file locally, hosting it on GitHub Pages, or
+// anywhere else outside that specific context leaves window.storage undefined, and every
+// save/load call would fail. This shim uses the real window.storage when it's actually
+// present (so cross-user template sharing still works there), and transparently falls
+// back to localStorage (a real, universal browser API) everywhere else -- localStorage
+// is per-browser only, so "shared" templates saved this way are only shared with that
+// same browser, not genuinely with other users, but the app stays fully functional
+// instead of failing outright.
+const appStorage = {
+  async get(key, shared){
+    if(window.storage){
+      try{ return await window.storage.get(key, shared); } catch(err){ /* fall through */ }
+    }
+    try{
+      const value = localStorage.getItem(key);
+      return value === null ? null : { key, value, shared: !!shared };
+    } catch(err){ return null; }
+  },
+  async set(key, value, shared){
+    if(window.storage){
+      try{ return await window.storage.set(key, value, shared); } catch(err){ /* fall through */ }
+    }
+    try{
+      localStorage.setItem(key, value);
+      return { key, value, shared: !!shared };
+    } catch(err){ return null; }
+  },
+  async delete(key, shared){
+    if(window.storage){
+      try{ return await window.storage.delete(key, shared); } catch(err){ /* fall through */ }
+    }
+    try{
+      localStorage.removeItem(key);
+      return { key, deleted: true, shared: !!shared };
+    } catch(err){ return null; }
+  },
+  async list(prefix, shared){
+    if(window.storage){
+      try{ return await window.storage.list(prefix, shared); } catch(err){ /* fall through */ }
+    }
+    try{
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys, prefix, shared: !!shared };
+    } catch(err){ return { keys: [], prefix, shared: !!shared }; }
+  }
+};
 
 // ---------------- HELPERS ----------------
 function uid(){ return 's' + Math.random().toString(36).slice(2,9); }
@@ -2254,12 +2318,19 @@ function render(){
     ctx.scale(-1,-1);
   }
   // floor texture
-  ctx.fillStyle = '#EFE9D8';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = 'rgba(139,94,60,0.10)';
-  ctx.lineWidth = 1;
-  for(let x=0; x<canvas.width; x+=36){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  if(exportRenderOptions && exportRenderOptions.whiteBg){
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  } else {
+    ctx.fillStyle = '#EFE9D8';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(!(exportRenderOptions && exportRenderOptions.skipGrid)){
+      ctx.strokeStyle = 'rgba(139,94,60,0.10)';
+      ctx.lineWidth = 1;
+      for(let x=0; x<canvas.width; x+=36){
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+      }
+    }
   }
 
   const r = seatRadius();
@@ -3460,7 +3531,7 @@ async function refreshSavedList(){
   const listEl = document.getElementById('savedList');
   listEl.innerHTML = '<div class="empty-hint">Loading…</div>';
   try{
-    const res = await window.storage.list('seatchart:', false);
+    const res = await appStorage.list('seatchart:', false);
     const keys = (res && res.keys) || [];
     if(keys.length===0){ listEl.innerHTML = '<div class="empty-hint">No saved charts yet.</div>'; return; }
     listEl.innerHTML = '';
@@ -3609,32 +3680,85 @@ document.getElementById('saveAsGroupBtn').onclick = ()=>{
   });
 };
 
+// Reads templates/manifest.json (a plain array of filenames, or {file, name} objects
+// for a custom display name) and fetches each listed .seatchart.json file from the
+// templates/ folder. This lets anyone hosting this file (e.g. on GitHub Pages) add
+// templates just by dropping files into that folder and listing them in the manifest --
+// no admin login or in-app publishing needed. Fails silently if there's no manifest
+// (e.g. opened via a plain file:// URL, where fetch() usually can't read local files
+// anyway), since file-based templates are optional.
+async function fetchFileBasedTemplates(){
+  try{
+    const res = await fetch('templates/manifest.json');
+    if(!res.ok) return [];
+    const entries = await res.json();
+    if(!Array.isArray(entries)) return [];
+    const templates = [];
+    for(const entry of entries){
+      const file = typeof entry === 'string' ? entry : entry.file;
+      const displayName = typeof entry === 'string'
+        ? entry.replace(/\.seatchart\.json$/i, '').replace(/\.json$/i, '')
+        : (entry.name || file);
+      if(!file) continue;
+      try{
+        const fileRes = await fetch('templates/' + file);
+        if(!fileRes.ok) continue;
+        const chartData = await fileRes.json();
+        templates.push({ name: displayName, chart: chartData });
+      } catch(err){ /* skip this one file, keep going */ }
+    }
+    return templates;
+  } catch(err){
+    return [];
+  }
+}
+
 async function refreshTemplateList(){
   const listEl = document.getElementById('templateList');
   listEl.innerHTML = '<div class="empty-hint">Loading…</div>';
+
+  const fileTemplates = await fetchFileBasedTemplates();
+
+  let localKeys = [];
   try{
-    const res = await window.storage.list('template:', true);
-    const keys = (res && res.keys) || [];
-    if(keys.length===0){ listEl.innerHTML = '<div class="empty-hint">No templates published yet.</div>'; return; }
-    listEl.innerHTML = '';
-    for(const key of keys){
-      const name = key.replace('template:','');
-      const row = document.createElement('div');
-      row.className = 'saved-item';
-      row.innerHTML = `<span class="name">${name}</span>`;
-      const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
-      loadBtn.onclick = ()=>loadTemplate(key);
-      row.appendChild(loadBtn);
-      listEl.appendChild(row);
-    }
-  } catch(err){
-    listEl.innerHTML = '<div class="empty-hint">Could not load templates.</div>';
+    const res = await appStorage.list('template:', true);
+    localKeys = (res && res.keys) || [];
+  } catch(err){ /* local templates just won't show if this fails */ }
+
+  if(fileTemplates.length === 0 && localKeys.length === 0){
+    listEl.innerHTML = '<div class="empty-hint">No templates published yet.</div>';
+    return;
   }
+  listEl.innerHTML = '';
+
+  fileTemplates.forEach(t=>{
+    const row = document.createElement('div');
+    row.className = 'saved-item';
+    row.innerHTML = `<span class="name">${t.name}</span>`;
+    const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
+    loadBtn.onclick = ()=>{
+      applyLoadedChartData(t.chart, t.name);
+      toast('Loaded template "'+t.name+'" -- your edits save privately, the template stays unchanged');
+    };
+    row.appendChild(loadBtn);
+    listEl.appendChild(row);
+  });
+
+  localKeys.forEach(key=>{
+    const name = key.replace('template:','');
+    const row = document.createElement('div');
+    row.className = 'saved-item';
+    row.innerHTML = `<span class="name">${name}</span>`;
+    const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
+    loadBtn.onclick = ()=>loadTemplate(key);
+    row.appendChild(loadBtn);
+    listEl.appendChild(row);
+  });
 }
 
 async function loadTemplate(key){
   try{
-    const res = await window.storage.get(key, true);
+    const res = await appStorage.get(key, true);
     if(!res){ toast('Template not found'); return; }
     const data = JSON.parse(res.value);
     const name = key.replace('template:','');
@@ -3656,7 +3780,7 @@ document.getElementById('publishTemplateBtn').onclick = async ()=>{
   if(!safeName){ toast('Enter a valid template name'); return; }
   const key = 'template:' + safeName;
   try{
-    const result = await window.storage.set(key, JSON.stringify(chart), true);
+    const result = await appStorage.set(key, JSON.stringify(chart), true);
     if(result){ toast('Published template "'+name+'"'); refreshTemplateList(); }
     else toast('Publish failed');
   } catch(err){ toast('Publish failed'); }
@@ -3667,7 +3791,7 @@ document.getElementById('saveBtn').onclick = async ()=>{
   const safeName = name.replace(/[^a-z0-9\-_]+/gi, '_') || 'Untitled';
   const key = 'seatchart:' + safeName;
   try{
-    const result = await window.storage.set(key, JSON.stringify(chart), false);
+    const result = await appStorage.set(key, JSON.stringify(chart), false);
     if(result){ toast('Saved "'+name+'"'); refreshSavedList(); }
     else toast('Save failed');
   } catch(err){ toast('Save failed'); }
@@ -3775,7 +3899,7 @@ function applyLoadedChartData(data, nameForField){
 
 async function loadChart(key){
   try{
-    const res = await window.storage.get(key, false);
+    const res = await appStorage.get(key, false);
     if(!res){ toast('Chart not found'); return; }
     const data = JSON.parse(res.value);
     applyLoadedChartData(data, key.replace('seatchart:',''));
@@ -3785,7 +3909,7 @@ async function loadChart(key){
 
 async function deleteChart(key){
   try{
-    await window.storage.delete(key, false);
+    await appStorage.delete(key, false);
     toast('Deleted');
     refreshSavedList();
   } catch(err){ toast('Delete failed'); }
@@ -3797,69 +3921,227 @@ refreshAutoGroupList();
 refreshCustomGroupList();
 
 // ---------------- EXPORT ----------------
-function composeExportCanvas(){
-  // draws title + chart + notes + legend into an offscreen canvas for clean export
-  const pad = 40;
-  const titleH = 60;
-  const legendH = chart.showLegend ? 40 : 0;
-  const notesH = chart.notes ? 26 : 0;
-  const w = canvas.width + pad*2;
-  const h = canvas.height + titleH + legendH + notesH + pad*2;
+// Renders the chart into a fresh offscreen canvas using the SAME drawing code as the
+// live view (by briefly redirecting the shared canvas/ctx globals), so print/export
+// modes never touch or disturb what's actually on screen.
+function renderChartToOffscreenCanvas(mode, scale){
+  // mode: 'screen' (exactly as displayed) | 'print-color' | 'print-bw'
+  // scale: 1/2/3 -- how many times larger than the base 900x560 to render at
+  scale = scale || 1;
+  const logicalW = canvas.width, logicalH = canvas.height; // capture the real base size (900x560) before any redirect
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = logicalW * scale;
+  offCanvas.height = logicalH * scale;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.scale(scale, scale);
+
+  // render()'s internal layout math (row positions, podium placement, bounds checks,
+  // etc.) all reads canvas.width/canvas.height directly. Rather than touching every one
+  // of those call sites, this proxy transparently reports the fixed LOGICAL size (900x560)
+  // for those reads, while the context underneath has already been scaled -- so drawing
+  // commands issued in ordinary 900x560 coordinates land correctly on the larger buffer,
+  // producing real added sharpness rather than a blurry stretched copy.
+  const canvasProxy = new Proxy(offCanvas, {
+    get(target, prop){
+      if(prop === 'width') return logicalW;
+      if(prop === 'height') return logicalH;
+      const val = target[prop];
+      return typeof val === 'function' ? val.bind(target) : val;
+    }
+  });
+
+  const savedCanvas = canvas, savedCtx = ctx;
+  canvas = canvasProxy; ctx = offCtx;
+  exportRenderOptions = mode === 'screen' ? null : { whiteBg: true, skipGrid: true };
+  render();
+  exportRenderOptions = null;
+  canvas = savedCanvas; ctx = savedCtx;
+
+  if(mode === 'print-bw'){
+    const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+    const d = imgData.data;
+    for(let i=0; i<d.length; i+=4){
+      const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+      d[i] = d[i+1] = d[i+2] = gray;
+    }
+    offCtx.putImageData(imgData, 0, 0);
+  }
+  return offCanvas;
+}
+
+// Draws title + chart + notes + legend into an offscreen canvas for clean export.
+function composeExportCanvas(mode, scale){
+  scale = scale || 1;
+  const chartCanvas = renderChartToOffscreenCanvas(mode, scale);
+  const isPrint = mode !== 'screen';
+  const pad = 40*scale;
+  const titleH = 60*scale;
+  const legendH = chart.showLegend ? 40*scale : 0;
+  const notesH = chart.notes ? 26*scale : 0;
+  const w = chartCanvas.width + pad*2;
+  const h = chartCanvas.height + titleH + legendH + notesH + pad*2;
   const out = document.createElement('canvas');
   out.width = w; out.height = h;
   const octx = out.getContext('2d');
-  octx.fillStyle = '#F7F3E9';
+  octx.fillStyle = isPrint ? '#FFFFFF' : '#F7F3E9';
   octx.fillRect(0,0,w,h);
   octx.fillStyle = '#242019';
-  octx.font = '600 28px Fraunces, serif';
+  octx.font = '600 ' + (28*scale) + 'px Fraunces, serif';
   octx.textBaseline = 'alphabetic';
-  octx.fillText(chart.title || 'Seating Chart', pad, pad+24);
+  octx.fillText(chart.title || 'Seating Chart', pad, pad+24*scale);
   octx.strokeStyle = '#242019';
-  octx.lineWidth = 2;
-  octx.beginPath(); octx.moveTo(pad, pad+38); octx.lineTo(w-pad, pad+38); octx.stroke();
-  octx.drawImage(canvas, pad, pad+titleH-10);
-  let y = pad+titleH-10+canvas.height+22;
+  octx.lineWidth = 2*scale;
+  octx.beginPath(); octx.moveTo(pad, pad+38*scale); octx.lineTo(w-pad, pad+38*scale); octx.stroke();
+  octx.drawImage(chartCanvas, pad, pad+titleH-10*scale);
+  let y = pad+titleH-10*scale+chartCanvas.height+22*scale;
   if(chart.notes){
-    octx.font = 'italic 14px Inter, sans-serif';
+    octx.font = 'italic ' + (14*scale) + 'px Inter, sans-serif';
     octx.fillStyle = '#5B5548';
     octx.fillText(chart.notes, pad, y);
-    y += 24;
+    y += 24*scale;
   }
   if(chart.showLegend){
     const seen = new Map();
     chart.seats.forEach(s=>{ if(!s.hidden && s.preset && !seen.has(s.preset)) seen.set(s.preset, s.color); });
-    let lx = pad, ly = y+4;
-    seen.forEach((color,name)=>{
+    const names = sortByPresetOrder([...seen.keys()]);
+    let lx = pad, ly = y+4*scale;
+    names.forEach(name=>{
+      const color = mode === 'print-bw' ? '#5B5548' : seen.get(name);
       octx.fillStyle = color;
-      octx.beginPath(); octx.arc(lx+6, ly, 6, 0, Math.PI*2); octx.fill();
+      octx.beginPath(); octx.arc(lx+6*scale, ly, 6*scale, 0, Math.PI*2); octx.fill();
       octx.fillStyle = '#5B5548';
-      octx.font = '12px Inter, sans-serif';
+      octx.font = (12*scale) + 'px Inter, sans-serif';
       const label = name;
-      octx.fillText(label, lx+18, ly+4);
-      lx += 18 + octx.measureText(label).width + 20;
-      if(lx > w-pad-100){ lx = pad; ly += 20; }
+      octx.fillText(label, lx+18*scale, ly+4*scale);
+      lx += 18*scale + octx.measureText(label).width + 20*scale;
+      if(lx > w-pad-100*scale){ lx = pad; ly += 20*scale; }
     });
   }
   return out;
 }
 
-document.getElementById('exportPng').onclick = ()=>{
-  const out = composeExportCanvas();
+function downloadCanvasAsPng(canvasEl, filename){
   const a = document.createElement('a');
-  a.download = (chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '.png';
-  a.href = out.toDataURL('image/png');
+  a.download = filename;
+  a.href = canvasEl.toDataURL('image/png');
+  document.body.appendChild(a);
   a.click();
-  toast('PNG downloaded');
+  document.body.removeChild(a);
+}
+
+function printCanvas(canvasEl){
+  const dataUrl = canvasEl.toDataURL('image/png');
+  const title = (chart.title || 'Seating Chart').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let printWindow;
+  try{
+    printWindow = window.open('', '_blank');
+  } catch(err){
+    printWindow = null;
+  }
+  if(!printWindow){
+    // Popup blocked (or window.print() unavailable in this context entirely) --
+    // fall back to a plain download so the user can still print it themselves.
+    downloadCanvasAsPng(canvasEl, (chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '-print.png');
+    toast('Pop-ups are blocked here -- downloaded an image you can print instead');
+    return;
+  }
+  printWindow.document.write(
+    '<html><head><title>' + title + '</title><style>' +
+    'body{margin:0;} img{width:100%; height:auto; display:block;}' +
+    '</style></head><body>' +
+    '<img src="' + dataUrl + '" onload="window.focus(); window.print();">' +
+    '</body></html>'
+  );
+  printWindow.document.close();
+}
+
+// Shared chooser used by all three export actions. `options` is an array of
+// {label, value} pairs; `onConfirm` receives the chosen value.
+const EXPORT_QUALITY_OPTIONS = [
+  { label: 'Standard (1x)', value: 1 },
+  { label: 'High (2x)', value: 2 },
+  { label: 'Very High (3x)', value: 3 },
+];
+
+function showExportOptionsPrompt(title, styleOptions, onConfirm){
+  const overlay = document.getElementById('exportOptionsOverlay');
+  document.getElementById('exportOptionsTitle').textContent = title;
+
+  let selectedStyle = styleOptions[0].value;
+  let selectedScale = 3; // default to the highest quality, since low resolution was the reported problem
+
+  function renderGroup(container, opts, selectedValue, onPick){
+    container.innerHTML = '';
+    opts.forEach(opt=>{
+      const btn = document.createElement('button');
+      btn.className = 'block' + (opt.value === selectedValue ? ' toggled' : '');
+      btn.textContent = opt.label;
+      btn.style.marginTop = '4px';
+      btn.onclick = ()=>{ onPick(opt.value); };
+      container.appendChild(btn);
+    });
+  }
+
+  const styleList = document.getElementById('exportOptionsList');
+  const qualityList = document.getElementById('exportQualityList');
+
+  function redrawStyle(){ renderGroup(styleList, styleOptions, selectedStyle, (v)=>{ selectedStyle = v; redrawStyle(); }); }
+  function redrawQuality(){ renderGroup(qualityList, EXPORT_QUALITY_OPTIONS, selectedScale, (v)=>{ selectedScale = v; redrawQuality(); }); }
+  redrawStyle();
+  redrawQuality();
+
+  overlay.classList.add('show');
+  document.getElementById('exportOptionsCancelBtn').onclick = ()=> overlay.classList.remove('show');
+  document.getElementById('exportOptionsConfirmBtn').onclick = ()=>{
+    overlay.classList.remove('show');
+    onConfirm(selectedStyle, selectedScale);
+  };
+}
+
+// Clicking the dimmed backdrop (not the dialog box itself) cancels/closes that dialog,
+// same as clicking its own Cancel button -- applies to all three modal dialogs.
+document.getElementById('confirmOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'confirmOverlay') hideConfirm();
+});
+document.getElementById('groupNameOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'groupNameOverlay') hideGroupNamePrompt();
+});
+document.getElementById('exportOptionsOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'exportOptionsOverlay') e.currentTarget.classList.remove('show');
+});
+
+document.getElementById('exportPng').onclick = ()=>{
+  showExportOptionsPrompt('Download PNG', [
+    { label: 'Digital – Full Color', value: 'screen' },
+    { label: 'Print – Color', value: 'print-color' },
+    { label: 'Print – Black & White', value: 'print-bw' },
+  ], (mode, scale)=>{
+    const out = composeExportCanvas(mode, scale);
+    downloadCanvasAsPng(out, (chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '.png');
+    toast('PNG downloaded');
+  });
 };
 
 document.getElementById('exportPdf').onclick = ()=>{
-  const out = composeExportCanvas();
-  const { jsPDF } = window.jspdf;
-  const orientation = out.width > out.height ? 'landscape' : 'portrait';
-  const pdf = new jsPDF({ orientation, unit:'pt', format:[out.width, out.height] });
-  pdf.addImage(out.toDataURL('image/png'), 'PNG', 0, 0, out.width, out.height);
-  pdf.save((chart.title || 'seating-chart').replace(/[^a-z0-9\-_]+/gi,'_') + '.pdf');
-  toast('PDF downloaded');
+  showExportOptionsPrompt('Download PDF', [
+    { label: 'Digital – Full Color', value: 'screen' },
+    { label: 'Print – Color', value: 'print-color' },
+    { label: 'Print – Black & White', value: 'print-bw' },
+  ], (mode, scale)=>{
+    const out = composeExportCanvas(mode, scale);
+    toast('Choose "Save as PDF" in the print dialog');
+    printCanvas(out);
+  });
+};
+
+document.getElementById('printChartBtn').onclick = ()=>{
+  showExportOptionsPrompt('Print Chart', [
+    { label: 'Print – Color', value: 'print-color' },
+    { label: 'Print – Black & White', value: 'print-bw' },
+  ], (mode, scale)=>{
+    const out = composeExportCanvas(mode, scale);
+    printCanvas(out);
+  });
 };
 
 // ---------------- INIT ----------------
