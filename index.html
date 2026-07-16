@@ -641,31 +641,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   .confirm-box p{ font-size:13.5px; line-height:1.5; color:var(--ink); margin:0 0 16px; }
   .confirm-box .btn-row button{ flex:1; }
 
-  .inst-menu-trigger{
-    width:100%; text-align:left; display:flex; align-items:center; justify-content:space-between;
-    font-family:'Inter',sans-serif; font-size:13px; padding:6px 8px;
-    border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
-    cursor:pointer;
-  }
-  .inst-menu-trigger:hover{ border-color:var(--brass); }
-  .inst-menu-trigger .tri-chev{ color:var(--ink-soft); font-size:10px; margin-left:6px; }
-  .inst-panel{
-    position:fixed; z-index:200; background:#fff; border:1px solid var(--line);
-    border-radius:8px; box-shadow:0 14px 34px rgba(0,0,0,0.22);
-    min-width:220px; max-height:320px; overflow-y:auto; padding:4px;
-  }
-  .inst-cat{
-    padding:7px 10px; font-size:13px; cursor:pointer; border-radius:5px;
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    white-space:nowrap; color:var(--ink);
-  }
-  .inst-cat:hover, .inst-cat.open{ background:var(--brass-soft); }
-  .inst-cat .chev{ color:var(--ink-soft); font-size:11px; }
-  .inst-item{
-    padding:6px 10px; font-size:13px; cursor:pointer; border-radius:5px; white-space:nowrap; color:var(--ink);
-  }
-  .inst-item:hover{ background:var(--brass-soft); }
-
   ::-webkit-scrollbar{ width:9px; height:9px; }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
 </style>
@@ -716,7 +691,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <div id="inspector" class="inspector" style="display:none;">
         <h4>Editing seat</h4>
         <label class="field"><span>Section / instrument</span>
-          <button type="button" class="inst-menu-trigger" id="presetSelect" data-value="">— choose —</button>
+          <select id="presetCategorySelect"></select>
+          <select id="presetItemSelect" style="margin-top:6px;"></select>
         </label>
         <label class="field"><span>Label</span>
           <input type="text" id="labelInput" maxlength="10">
@@ -736,7 +712,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <div id="batchInspector" class="inspector" style="display:none;">
         <h4><span id="batchCount">0</span> seats selected</h4>
         <label class="field"><span>Set section / instrument</span>
-          <button type="button" class="inst-menu-trigger" id="batchPresetSelect" data-value="">— choose —</button>
+          <select id="batchPresetCategorySelect"></select>
+          <select id="batchPresetItemSelect" style="margin-top:6px;"></select>
         </label>
         <div class="swatches" id="batchSwatches"></div>
         <label class="field" id="batchIconRotationField" style="display:none;"><span>Icon rotation</span>
@@ -829,7 +806,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">2.20.3</span>
+        v<span id="appVersion">2.22.0</span>
       </div>
     </div>
   </aside>
@@ -919,6 +896,58 @@ const PRESETS = [
     ['Piano','Pno','#121212'],['Clavinova','Clav','#5ECC3E'],['Harp','Hrp','#3ECC61'],['Vocal','Voc','#8ACC3E'],['Custom','',"#888888"],
   ]},
 ];
+
+function findPresetInfo(name){
+  for(const g of PRESETS){
+    for(const item of g.items){
+      if(item[0] === name) return item; // [name, abbr, color]
+    }
+  }
+  return null;
+}
+
+function findGroupForPreset(name){
+  for(const g of PRESETS){
+    if(g.items.some(item=>item[0] === name)) return g.group;
+  }
+  return null;
+}
+
+// Populates the top-level category <select> (Woodwinds, Brass, Strings, etc.).
+function populateCategorySelect(selectEl){
+  selectEl.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '— category —';
+  selectEl.appendChild(placeholder);
+  PRESETS.forEach(g=>{
+    const opt = document.createElement('option');
+    opt.value = g.group;
+    opt.textContent = g.group;
+    selectEl.appendChild(opt);
+  });
+}
+
+// Populates the second-level instrument <select> with just the items in one category --
+// this is the piece that preserves the original two-step (category, then instrument)
+// flow, while both dropdowns remain genuine <select> elements with native OS styling.
+function populateItemSelectForCategory(selectEl, categoryName){
+  selectEl.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = categoryName ? '— choose —' : '— pick a category first —';
+  selectEl.appendChild(placeholder);
+  selectEl.disabled = !categoryName;
+  if(!categoryName) return;
+  const group = PRESETS.find(g=>g.group === categoryName);
+  if(!group) return;
+  group.items.forEach(([name])=>{
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    selectEl.appendChild(opt);
+  });
+}
 const SWATCH_COLORS = ['#6FA8C9','#7BC1B0','#8FBF6B','#D9A441','#C4823A','#9A6B9E','#C86B6B','#8C3A3A','#D4B25F','#5B5548','#888888'];
 
 let chart = {
@@ -2960,7 +2989,12 @@ function refreshSelectionUI(){
     document.getElementById('labelInput').value = seat.label;
     document.getElementById('standCheck').checked = seat.stand;
     document.getElementById('hiddenCheck').checked = seat.hidden;
-    setPresetTriggerValue(document.getElementById('presetSelect'), seat.preset || '');
+    const catEl = document.getElementById('presetCategorySelect');
+    const itemEl = document.getElementById('presetItemSelect');
+    const cat = seat.preset ? findGroupForPreset(seat.preset) : null;
+    catEl.value = cat || '';
+    populateItemSelectForCategory(itemEl, cat);
+    itemEl.value = seat.preset || '';
     const partnerInfo = document.getElementById('standPartnerInfo');
     const standLine = document.getElementById('standCheckLine');
     if(seat.standPartner && getSeat(seat.standPartner)){
@@ -3175,85 +3209,6 @@ function buildPodiumSwatches(activeColor){
     };
     wrap.appendChild(d);
   });
-}
-
-// Sets a trigger button's displayed label to match a stored instrument name.
-function setPresetTriggerValue(triggerEl, value){
-  triggerEl.dataset.value = value || '';
-  triggerEl.innerHTML = (value || '— choose —') + '<span class="tri-chev">▾</span>';
-}
-
-let closeActiveInstMenu = null;
-let activeInstMenuTrigger = null;
-
-function closeInstMenu(){
-  if(closeActiveInstMenu){ closeActiveInstMenu(); closeActiveInstMenu = null; }
-  activeInstMenuTrigger = null;
-}
-
-// Opens a two-level menu (categories, then a flyout of instruments on hover/click)
-// anchored under triggerEl. onSelect(name, abbr, color) fires when an instrument is chosen.
-function openInstMenu(triggerEl, onSelect){
-  const wasOpenForThisTrigger = (activeInstMenuTrigger === triggerEl);
-  closeInstMenu();
-  if(wasOpenForThisTrigger) return; // second click on the same trigger just closes it
-  activeInstMenuTrigger = triggerEl;
-  const panel = document.createElement('div');
-  panel.className = 'inst-panel';
-  let submenu = null;
-
-  function closeSubmenu(){
-    if(submenu){ submenu.remove(); submenu = null; }
-    panel.querySelectorAll('.inst-cat.open').forEach(el=>el.classList.remove('open'));
-  }
-  function positionFlyout(anchorRect, el){
-    document.body.appendChild(el);
-    const elW = el.offsetWidth, elH = el.offsetHeight;
-    let left = anchorRect.right + 2;
-    if(left + elW > window.innerWidth - 8) left = anchorRect.left - elW - 2;
-    let top = anchorRect.top;
-    if(top + elH > window.innerHeight - 8) top = Math.max(8, window.innerHeight - elH - 8);
-    el.style.left = left + 'px';
-    el.style.top = top + 'px';
-  }
-
-  PRESETS.forEach(group=>{
-    const catRow = document.createElement('div');
-    catRow.className = 'inst-cat';
-    catRow.innerHTML = `<span>${group.group}</span><span class="chev">▸</span>`;
-    const showSub = ()=>{
-      closeSubmenu();
-      catRow.classList.add('open');
-      submenu = document.createElement('div');
-      submenu.className = 'inst-panel';
-      group.items.forEach(([name,abbr,color])=>{
-        const item = document.createElement('div');
-        item.className = 'inst-item';
-        item.textContent = name;
-        item.onclick = (e)=>{ e.stopPropagation(); onSelect(name, abbr, color); closeInstMenu(); };
-        submenu.appendChild(item);
-      });
-      positionFlyout(catRow.getBoundingClientRect(), submenu);
-    };
-    catRow.addEventListener('mouseenter', showSub);
-    catRow.addEventListener('click', (e)=>{ e.stopPropagation(); showSub(); });
-    panel.appendChild(catRow);
-  });
-
-  positionFlyout(triggerEl.getBoundingClientRect(), panel);
-
-  const onDocClick = (e)=>{
-    if(!panel.contains(e.target) && (!submenu || !submenu.contains(e.target)) && e.target!==triggerEl){
-      closeInstMenu();
-    }
-  };
-  document.addEventListener('mousedown', onDocClick, true);
-
-  closeActiveInstMenu = ()=>{
-    closeSubmenu();
-    panel.remove();
-    document.removeEventListener('mousedown', onDocClick, true);
-  };
 }
 
 function buildPaintSwatches(){
@@ -3600,18 +3555,23 @@ document.getElementById('labelInput').oninput = e=>{
 document.getElementById('podiumLabelInput').oninput = e=>{
   chart.podium.label = e.target.value; render();
 };
-document.getElementById('presetSelect').onclick = (e)=>{
+document.getElementById('presetCategorySelect').onchange = (e)=>{
+  populateItemSelectForCategory(document.getElementById('presetItemSelect'), e.target.value);
+};
+document.getElementById('presetItemSelect').onchange = (e)=>{
   const s = getSeat(selectedId); if(!s) return;
-  const triggerEl = e.currentTarget;
-  openInstMenu(triggerEl, (name, abbr, color)=>{
-    pushHistory();
-    s.preset = name;
-    s.color = color;
-    if(abbr) s.label = abbr;
-    refreshSelectionUI();
-    refreshAutoGroupList();
-    render();
-  });
+  const name = e.target.value;
+  if(!name) return;
+  const preset = findPresetInfo(name);
+  if(!preset) return;
+  const [, abbr, color] = preset;
+  pushHistory();
+  s.preset = name;
+  s.color = color;
+  if(abbr) s.label = abbr;
+  refreshSelectionUI();
+  refreshAutoGroupList();
+  render();
 };
 document.getElementById('standCheck').onchange = e=>{
   const s = getSeat(selectedId); if(!s) return;
@@ -3662,21 +3622,27 @@ document.getElementById('deleteSeatBtn').onclick = ()=>{
   refreshCustomGroupList();
 };
 
-document.getElementById('batchPresetSelect').onclick = (e)=>{
-  const triggerEl = e.currentTarget;
-  openInstMenu(triggerEl, (name, abbr, color)=>{
-    pushHistory();
-    selection.forEach(id=>{
-      const s = getSeat(id); if(!s) return;
-      s.preset = name;
-      s.color = color;
-      if(abbr) s.label = abbr;
-    });
-    setPresetTriggerValue(triggerEl, '');
-    refreshSelectionUI();
-    refreshAutoGroupList();
-    render();
+document.getElementById('batchPresetCategorySelect').onchange = (e)=>{
+  populateItemSelectForCategory(document.getElementById('batchPresetItemSelect'), e.target.value);
+};
+document.getElementById('batchPresetItemSelect').onchange = (e)=>{
+  const name = e.target.value;
+  if(!name) return;
+  const preset = findPresetInfo(name);
+  if(!preset) return;
+  const [, abbr, color] = preset;
+  pushHistory();
+  selection.forEach(id=>{
+    const s = getSeat(id); if(!s) return;
+    s.preset = name;
+    s.color = color;
+    if(abbr) s.label = abbr;
   });
+  document.getElementById('batchPresetCategorySelect').value = '';
+  populateItemSelectForCategory(e.target, '');
+  refreshSelectionUI();
+  refreshAutoGroupList();
+  render();
 };
 document.getElementById('batchStandCheck').onchange = e=>{
   pushHistory();
@@ -4100,35 +4066,48 @@ async function refreshTemplateList(){
     localKeys = (res && res.keys) || [];
   } catch(err){ /* local templates just won't show if this fails */ }
 
-  if(fileTemplates.length === 0 && localKeys.length === 0){
+  const entries = [
+    ...fileTemplates.map(t=>({ name: t.name, load: ()=>{
+      applyLoadedChartData(t.chart, t.name);
+      toast('Loaded template "'+t.name+'" -- your edits save privately, the template stays unchanged');
+    }})),
+    ...localKeys.map(key=>({ name: key.replace('template:',''), load: ()=>loadTemplate(key) })),
+  ];
+
+  if(entries.length === 0){
     listEl.innerHTML = '<div class="empty-hint">No templates published yet.</div>';
     return;
   }
+  if(entries.length === 1){
+    listEl.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'saved-item';
+    row.innerHTML = `<span class="name">${entries[0].name}</span>`;
+    const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
+    loadBtn.onclick = entries[0].load;
+    row.appendChild(loadBtn);
+    listEl.appendChild(row);
+    return;
+  }
+  // 2+ entries: use a dropdown instead of a growing list, to keep the panel compact
+  // and match the same native-select style used elsewhere (groups, row shape, etc.).
   listEl.innerHTML = '';
-
-  fileTemplates.forEach(t=>{
-    const row = document.createElement('div');
-    row.className = 'saved-item';
-    row.innerHTML = `<span class="name">${t.name}</span>`;
-    const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
-    loadBtn.onclick = ()=>{
-      applyLoadedChartData(t.chart, t.name);
-      toast('Loaded template "'+t.name+'" -- your edits save privately, the template stays unchanged');
-    };
-    row.appendChild(loadBtn);
-    listEl.appendChild(row);
+  const row = document.createElement('div');
+  row.style.display = 'flex'; row.style.gap = '6px';
+  const select = document.createElement('select');
+  select.style.flex = '1';
+  entries.forEach((entry, i)=>{
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = entry.name;
+    select.appendChild(opt);
   });
-
-  localKeys.forEach(key=>{
-    const name = key.replace('template:','');
-    const row = document.createElement('div');
-    row.className = 'saved-item';
-    row.innerHTML = `<span class="name">${name}</span>`;
-    const loadBtn = document.createElement('button'); loadBtn.textContent='Load';
-    loadBtn.onclick = ()=>loadTemplate(key);
-    row.appendChild(loadBtn);
-    listEl.appendChild(row);
-  });
+  const loadBtn = document.createElement('button');
+  loadBtn.textContent = 'Load';
+  loadBtn.onclick = ()=> entries[Number(select.value)].load();
+  row.appendChild(select);
+  row.appendChild(loadBtn);
+  listEl.appendChild(row);
 }
 
 async function loadTemplate(key){
@@ -4568,6 +4547,10 @@ document.getElementById('printChartBtn').onclick = ()=>{
 };
 
 // ---------------- INIT ----------------
+populateCategorySelect(document.getElementById('presetCategorySelect'));
+populateItemSelectForCategory(document.getElementById('presetItemSelect'), '');
+populateCategorySelect(document.getElementById('batchPresetCategorySelect'));
+populateItemSelectForCategory(document.getElementById('batchPresetItemSelect'), '');
 addRow(8, 'arc');
 addRow(12, 'arc');
 fitTitleFont();
