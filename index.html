@@ -772,6 +772,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         <div class="empty-hint" id="seatRankNoSections" style="display:none;">Assign an instrument to some seats first.</div>
       </div>
       <div class="checkline"><input type="checkbox" id="showLabels" checked> <label for="showLabels">Show seat labels</label></div>
+      <div class="checkline"><input type="checkbox" id="showMusicStand" checked> <label for="showMusicStand">Show music stand</label></div>
       <div class="checkline"><input type="checkbox" id="showLegend" checked> <label for="showLegend">Show section legend</label></div>
       <div class="checkline"><input type="checkbox" id="flipChart"> <label for="flipChart">Flip (performer's view)</label></div>
       <div style="margin-top:10px; padding-bottom:10px; border-bottom:1px solid var(--line);"></div>
@@ -826,7 +827,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.5.0</span>
+        v<span id="appVersion">3.6.1</span>
       </div>
     </div>
   </aside>
@@ -975,6 +976,7 @@ let chart = {
   notes: '',
   flipped: false,
   showLabels: true,
+  showMusicStand: true,
   showLegend: true,
   showSeatRank: false,
   seatRankSettings: {}, // { [presetName]: { style: 'default'|'outer', invert: bool, hidden: bool } }
@@ -2149,7 +2151,7 @@ function drawPodium(){
     ctx.rect(pos.x - w/2, pos.y - h/2, w, h);
     ctx.fill(); ctx.stroke();
 
-    if(chart.podium.standType){
+    if(chart.podium.standType && chart.showMusicStand !== false){
       const isConductor = chart.podium.standType === 'conductor';
       const standR = seatRadius() * (isConductor ? 1.45 : 1);
       const offsetDist = h/2 + standR*1.6;
@@ -2844,29 +2846,31 @@ function render(){
   const seatRanks = chart.showSeatRank ? computeSeatRanks() : null;
 
   // --- pass 1: music stands (drawn first so chairs sit on top) ---
-  const drawnStandPairs = new Set();
-  chart.seats.forEach(seat=>{
-    if(seat.hidden) return;
-    if(seat.standPartner){
-      const partner = getSeat(seat.standPartner);
-      if(!partner || partner.hidden) return;
-      const key = standKeyPair(seat.id, partner.id);
-      if(drawnStandPairs.has(key)) return;
-      drawnStandPairs.add(key);
-      ensureStandOffset(key, seat, partner);
-      ensureStandClearance(key, seat, partner);
-      const pos = standAbsolutePos(key);
-      const dir = standFaceDir(seat, partner);
-      drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
-    } else if(seat.stand){
-      const key = standKeySolo(seat.id);
-      ensureStandOffset(key, seat);
-      ensureStandClearance(key, seat);
-      const pos = standAbsolutePos(key);
-      const dir = standFaceDir(seat);
-      drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
-    }
-  });
+  if(chart.showMusicStand !== false){
+    const drawnStandPairs = new Set();
+    chart.seats.forEach(seat=>{
+      if(seat.hidden) return;
+      if(seat.standPartner){
+        const partner = getSeat(seat.standPartner);
+        if(!partner || partner.hidden) return;
+        const key = standKeyPair(seat.id, partner.id);
+        if(drawnStandPairs.has(key)) return;
+        drawnStandPairs.add(key);
+        ensureStandOffset(key, seat, partner);
+        ensureStandClearance(key, seat, partner);
+        const pos = standAbsolutePos(key);
+        const dir = standFaceDir(seat, partner);
+        drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+      } else if(seat.stand){
+        const key = standKeySolo(seat.id);
+        ensureStandOffset(key, seat);
+        ensureStandClearance(key, seat);
+        const pos = standAbsolutePos(key);
+        const dir = standFaceDir(seat);
+        drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+      }
+    });
+  }
 
   // --- pass 2: chairs ---
   chart.seats.forEach(seat=>{
@@ -3858,6 +3862,7 @@ document.getElementById('podiumDisableBtn').onclick = ()=>{
 };
 
 document.getElementById('showLabels').onchange = e=>{ pushHistory(); chart.showLabels=e.target.checked; render(); };
+document.getElementById('showMusicStand').onchange = e=>{ pushHistory(); chart.showMusicStand=e.target.checked; render(); };
 document.getElementById('showLegend').onchange = e=>{ pushHistory(); chart.showLegend=e.target.checked; render(); };
 document.getElementById('showSeatRank').onchange = e=>{
   pushHistory();
@@ -4377,6 +4382,7 @@ function syncUIFromChart(){
   document.getElementById('notesInput').value = chart.notes || '';
   document.getElementById('flipChart').checked = !!chart.flipped;
   document.getElementById('showLabels').checked = chart.showLabels !== false;
+  document.getElementById('showMusicStand').checked = chart.showMusicStand !== false;
   document.getElementById('showLegend').checked = chart.showLegend !== false;
   document.getElementById('showSeatRank').checked = !!chart.showSeatRank;
   document.getElementById('seatRankOptions').style.display = chart.showSeatRank ? 'block' : 'none';
@@ -4423,6 +4429,7 @@ function applyLoadedChartData(data, nameForField){
   });
   if(!Array.isArray(data.groups)) data.groups = [];
   if(!Array.isArray(data.rowSeatSpacingPct)) data.rowSeatSpacingPct = [];
+  if(data.showMusicStand === undefined) data.showMusicStand = true;
   if(data.showSeatRank === undefined) data.showSeatRank = false;
   if(!data.seatRankSettings || typeof data.seatRankSettings !== 'object' || Array.isArray(data.seatRankSettings)){
     data.seatRankSettings = {};
