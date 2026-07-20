@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Seating Chart Studio</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <script>
 /** @license
  *
@@ -825,7 +826,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.3.0</span>
+        v<span id="appVersion">3.4.1</span>
       </div>
     </div>
   </aside>
@@ -3220,7 +3221,13 @@ let customGroupRowPct = 100;
 function isCustomGroupSelection(){
   return selection.size >= 2 && [...selection].every(id=>{
     const s = getSeat(id);
-    return s && s.manuallyMoved;
+    if(!s || !s.manuallyMoved) return false;
+    // Explicitly toggled to a custom line/arc, or naturally sitting in a straight row --
+    // both are already conceptually "a line," so scoping spacing to it as a line makes
+    // sense. A manually-nudged seat that's still part of an arc row is NOT a line, and
+    // treating it as one would flatten the curve -- that case falls through instead to
+    // the arc-preserving scoped spacing, which correctly leaves manually-moved seats alone.
+    return s.layoutMode === 'custom' || rowShapeOf(s) === 'straight';
   });
 }
 
