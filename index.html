@@ -698,7 +698,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         <label class="field"><span>Label</span>
           <div style="display:flex; gap:6px;">
             <input type="text" id="labelInput" maxlength="10" style="flex:1;">
-            <button type="button" id="clearLabelBtn" style="flex-shrink:0;">Clear</button>
+            <button type="button" id="clearLabelBtn" style="flex-shrink:0;">Reset</button>
           </div>
         </label>
         <div class="swatches" id="seatSwatches"></div>
@@ -719,7 +719,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
           <select id="batchPresetCategorySelect"></select>
           <select id="batchPresetItemSelect" style="margin-top:6px;"></select>
         </label>
-        <button type="button" class="block" id="batchClearLabelBtn">Clear Labels</button>
+        <button type="button" class="block" id="batchClearLabelBtn">Reset Seats</button>
         <div class="swatches" id="batchSwatches"></div>
         <label class="field" id="batchIconRotationField" style="display:none;"><span>Icon rotation</span>
           <input type="range" id="batchIconRotationSlider" min="-180" max="180" value="0">
@@ -831,7 +831,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.7.0</span>
+        v<span id="appVersion">3.8.0</span>
       </div>
     </div>
   </aside>
@@ -3688,19 +3688,40 @@ document.getElementById('labelInput').oninput = e=>{
   const s = getSeat(selectedId); if(!s) return;
   s.label = e.target.value; render();
 };
+
+// Resets a seat back to its default, unassigned state: no instrument, the default
+// (unassigned) color, and a plain-number placeholder for its label. Callers are
+// responsible for renumbering the affected row(s) afterward, so this label ends up
+// matching the seat's actual position -- exactly like a freshly-added seat.
+function resetSeatToDefault(seat){
+  seat.preset = '';
+  seat.color = '#B9AF95';
+  seat.label = '0';
+}
+
 document.getElementById('clearLabelBtn').onclick = ()=>{
   const s = getSeat(selectedId); if(!s) return;
   pushHistory();
-  s.label = '';
-  document.getElementById('labelInput').value = '';
+  resetSeatToDefault(s);
+  renumberRow(s.row);
+  document.getElementById('labelInput').value = s.label;
+  refreshSelectionUI();
+  refreshAutoGroupList();
+  if(chart.showSeatRank) refreshSeatRankSectionSelect();
   render();
 };
 document.getElementById('batchClearLabelBtn').onclick = ()=>{
   if(selection.size === 0) return;
   pushHistory();
+  const rows = new Set();
   selection.forEach(id=>{
-    const s = getSeat(id); if(s) s.label = '';
+    const s = getSeat(id);
+    if(s){ resetSeatToDefault(s); rows.add(s.row); }
   });
+  renumberRows([...rows]);
+  refreshSelectionUI();
+  refreshAutoGroupList();
+  if(chart.showSeatRank) refreshSeatRankSectionSelect();
   render();
 };
 document.getElementById('podiumLabelInput').oninput = e=>{
