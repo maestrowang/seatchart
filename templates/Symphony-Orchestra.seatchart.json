@@ -1614,5 +1614,23 @@
     100,
     73,
     76
-  ]
+  ],
+  "showSeatRank": true,
+  "seatRankSettings": {
+    "Flute": {
+      "style": "default",
+      "invert": false,
+      "hidden": false
+    },
+    "Violin 1": {
+      "style": "outer",
+      "invert": false,
+      "hidden": false
+    },
+    "Cello": {
+      "style": "outer",
+      "invert": false,
+      "hidden": false
+    }
+  }
 }
