@@ -1,4 +1,5 @@
 [
-  { "file": "standard-small-ensemble.seatchart.json", "name": "Standard Small Ensemble" },
+  { "file": "String_Orchestra.seatchart.json", "name": "String Orchestra" },
+  { "file": "String_Orchestra_LG.seatchart.json", "name": "String Orchestra LG" },
   {"file": "Symphony-Orchestra.seatchart.json", "name": "Symphony Orchestra"}
 ]
