@@ -696,7 +696,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
           <select id="presetItemSelect" style="margin-top:6px;"></select>
         </label>
         <label class="field"><span>Label</span>
-          <input type="text" id="labelInput" maxlength="10">
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="labelInput" maxlength="10" style="flex:1;">
+            <button type="button" id="clearLabelBtn" style="flex-shrink:0;">Clear</button>
+          </div>
         </label>
         <div class="swatches" id="seatSwatches"></div>
         <label class="field" id="iconRotationField" style="display:none;"><span>Icon rotation</span>
@@ -716,6 +719,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
           <select id="batchPresetCategorySelect"></select>
           <select id="batchPresetItemSelect" style="margin-top:6px;"></select>
         </label>
+        <button type="button" class="block" id="batchClearLabelBtn">Clear Labels</button>
         <div class="swatches" id="batchSwatches"></div>
         <label class="field" id="batchIconRotationField" style="display:none;"><span>Icon rotation</span>
           <input type="range" id="batchIconRotationSlider" min="-180" max="180" value="0">
@@ -827,7 +831,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.6.1</span>
+        v<span id="appVersion">3.7.0</span>
       </div>
     </div>
   </aside>
@@ -3684,6 +3688,21 @@ document.getElementById('labelInput').oninput = e=>{
   const s = getSeat(selectedId); if(!s) return;
   s.label = e.target.value; render();
 };
+document.getElementById('clearLabelBtn').onclick = ()=>{
+  const s = getSeat(selectedId); if(!s) return;
+  pushHistory();
+  s.label = '';
+  document.getElementById('labelInput').value = '';
+  render();
+};
+document.getElementById('batchClearLabelBtn').onclick = ()=>{
+  if(selection.size === 0) return;
+  pushHistory();
+  selection.forEach(id=>{
+    const s = getSeat(id); if(s) s.label = '';
+  });
+  render();
+};
 document.getElementById('podiumLabelInput').oninput = e=>{
   chart.podium.label = e.target.value; render();
 };
@@ -4029,6 +4048,9 @@ window.addEventListener('keydown', e=>{
     chart.seats = chart.seats.filter(s=>!selection.has(s.id));
     renumberRows(rows);
     clearSelection();
+    refreshAutoGroupList();
+    refreshCustomGroupList();
+    if(chart.showSeatRank) refreshSeatRankSectionSelect();
   }
 
   if(e.key==='ArrowUp' || e.key==='ArrowDown' || e.key==='ArrowLeft' || e.key==='ArrowRight'){
