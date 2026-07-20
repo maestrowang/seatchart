@@ -826,7 +826,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.4.1</span>
+        v<span id="appVersion">3.5.0</span>
       </div>
     </div>
   </aside>
@@ -1365,7 +1365,7 @@ function computeSeatRanks(){
 // Reshapes one arc row's curve to a given bulge depth (sagitta) while keeping its first
 // and last seat exactly where they currently are. Interior seats move along the new,
 // more (or less) curved arc between those two fixed points.
-function reshapeRowArc(rowIndex, sagitta){
+function reshapeRowArc(rowIndex, sagitta, overrideManualIds){
   if(chart.rowShapes[rowIndex] !== 'arc') return;
   const seats = chart.seats.filter(s=>s.row===rowIndex);
   if(seats.length < 3) return; // nothing in between the two endpoints to reshape
@@ -1397,7 +1397,8 @@ function reshapeRowArc(rowIndex, sagitta){
   while(dAngle < -Math.PI) dAngle += Math.PI*2;
 
   seats.forEach(s=>{
-    if(s.rowT === 0 || s.rowT === 1 || s.rowT === undefined || s.manuallyMoved) return;
+    if(s.rowT === 0 || s.rowT === 1 || s.rowT === undefined) return;
+    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     const ang = angle0 + dAngle*s.rowT;
     s.x = cx + Math.cos(ang)*R;
     s.y = cy + Math.sin(ang)*R;
@@ -1471,9 +1472,9 @@ function applySeatSpacingToSelection(newValue){
     let guard = 0;
     while(guard < 25){
       if(chart.rowShapes[rowIndex] === 'arc' && chart.rowSagittaBase[rowIndex] !== undefined){
-        reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100));
+        reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100), selection);
       } else if(chart.rowShapes[rowIndex] === 'straight' && chart.rowWidthBase[rowIndex] !== undefined){
-        reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100));
+        reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100), selection);
       } else {
         return;
       }
@@ -1487,7 +1488,7 @@ function applySeatSpacingToSelection(newValue){
 
 // Scales a straight row's total width around its own center, spreading (or tightening)
 // the gap between adjacent seats. Depth (y) is never touched.
-function reshapeStraightRowWidth(rowIndex, targetWidth){
+function reshapeStraightRowWidth(rowIndex, targetWidth, overrideManualIds){
   if(chart.rowShapes[rowIndex] !== 'straight') return;
   const seats = chart.seats.filter(s=>s.row===rowIndex && s.rowT !== undefined);
   if(seats.length === 0) return;
@@ -1497,7 +1498,7 @@ function reshapeStraightRowWidth(rowIndex, targetWidth){
   const cx = canvas.width/2;
   const startX = cx - width/2;
   seats.forEach(s=>{
-    if(s.manuallyMoved) return;
+    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     s.x = seats.length===1 ? cx : startX + width*s.rowT;
   });
 }
@@ -1505,7 +1506,7 @@ function reshapeStraightRowWidth(rowIndex, targetWidth){
 // Recomputes an arc row's canonical circle (all seats, including endpoints) from its
 // current radius, then re-applies whatever bulge the "Seat spacing" slider currently
 // calls for on top of that. Used whenever row depth changes.
-function rebuildArcRow(rowIndex, cyOverride){
+function rebuildArcRow(rowIndex, cyOverride, overrideManualIds){
   if(chart.rowShapes[rowIndex] !== 'arc') return;
   const radius = chart.rowRadii[rowIndex];
   let spanRad = chart.rowSpanRad[rowIndex];
@@ -1514,7 +1515,8 @@ function rebuildArcRow(rowIndex, cyOverride){
   const cx = canvas.width/2, cy = cyOverride !== undefined ? cyOverride : podiumAnchorY();
   const startAngle = Math.PI/2 - spanRad/2;
   chart.seats.filter(s=>s.row===rowIndex).forEach(s=>{
-    if(s.rowT === undefined || s.manuallyMoved) return;
+    if(s.rowT === undefined) return;
+    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     const angle = startAngle + s.rowT*spanRad;
     s.x = cx - Math.cos(angle)*radius;
     s.y = cy - Math.sin(angle)*radius;
@@ -1522,13 +1524,13 @@ function rebuildArcRow(rowIndex, cyOverride){
   chart.rowSagittaBase[rowIndex] = radius * (1 - Math.cos(spanRad/2));
   const seatSpacingPct = chart.rowSeatSpacingPct[rowIndex] !== undefined ? chart.rowSeatSpacingPct[rowIndex] : (chart.seatSpacing || 100);
   if(seatSpacingPct !== 100){
-    reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (seatSpacingPct/100));
+    reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (seatSpacingPct/100), overrideManualIds);
   }
 }
 
 // Straight rows have no bulge -- a depth change just slides the whole row's seats
 // to the new distance from the podium, keeping their left-right positions untouched.
-function rebuildStraightRow(rowIndex, cyOverride){
+function rebuildStraightRow(rowIndex, cyOverride, overrideManualIds){
   if(chart.rowShapes[rowIndex] !== 'straight') return;
   const depth = chart.rowRadii[rowIndex];
   if(depth === undefined) return;
@@ -1549,7 +1551,7 @@ function rebuildStraightRow(rowIndex, cyOverride){
 
   const seats = chart.seats.filter(s=>s.row===rowIndex);
   seats.forEach(s=>{
-    if(s.manuallyMoved) return;
+    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     s.y = y;
     if(clampedWidth !== undefined && s.rowT !== undefined){
       s.x = seats.length === 1 ? cx : startX + clampedWidth*s.rowT;
@@ -1785,8 +1787,8 @@ function applyRowSpacingToSelection(newValue){
     let guard = 0;
     while(guard < 25){
       chart.rowRadii[i] = Math.min(prevRadius + gapBase*(effective/100), maxRowRadius());
-      rebuildArcRow(i);
-      rebuildStraightRow(i);
+      rebuildArcRow(i, undefined, selection);
+      rebuildStraightRow(i, undefined, selection);
       if(!rowOverflowsCanvas(i) || effective <= 60) return;
       effective = Math.max(60, effective - 4);
       guard++;
@@ -1840,8 +1842,8 @@ function applyStageSpacingToSelection(newValue){
   const rows = rowsInSelection();
   const anchor = clampAnchorForRows(rawAnchor, [...rows]);
   rows.forEach(i=>{
-    rebuildArcRow(i, anchor);
-    rebuildStraightRow(i, anchor);
+    rebuildArcRow(i, anchor, selection);
+    rebuildStraightRow(i, anchor, selection);
   });
 }
 
