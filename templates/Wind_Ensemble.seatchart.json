@@ -3,7 +3,7 @@
   "notes": "",
   "flipped": false,
   "showLabels": true,
-  "showMusicStand": true,
+  "showMusicStand": false,
   "showLegend": true,
   "showSeatRank": false,
   "seatRankSettings": {
@@ -25,7 +25,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Clarinet",
@@ -42,7 +42,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Clarinet",
@@ -59,7 +59,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Clarinet",
@@ -76,7 +76,7 @@
       "label": "Ob",
       "color": "#3E76CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Oboe",
@@ -93,7 +93,7 @@
       "label": "Ob",
       "color": "#3E76CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Oboe",
@@ -110,7 +110,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Flute",
@@ -127,7 +127,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Flute",
@@ -144,7 +144,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 0,
       "preset": "Flute",
@@ -161,7 +161,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Clarinet",
@@ -178,7 +178,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Clarinet",
@@ -195,7 +195,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Clarinet",
@@ -212,7 +212,7 @@
       "label": "BCl",
       "color": "#9ACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Bass Clarinet",
@@ -229,7 +229,7 @@
       "label": "Bsn",
       "color": "#CCBD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Bassoon",
@@ -246,7 +246,7 @@
       "label": "Bsn",
       "color": "#CCBD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Bassoon",
@@ -263,7 +263,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -280,7 +280,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -297,7 +297,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -314,7 +314,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -331,7 +331,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -348,7 +348,7 @@
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 1,
       "preset": "Flute",
@@ -365,7 +365,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Clarinet",
@@ -382,7 +382,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Clarinet",
@@ -399,7 +399,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Clarinet",
@@ -416,7 +416,7 @@
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Clarinet",
@@ -433,7 +433,7 @@
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "French Horn",
@@ -450,7 +450,7 @@
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "French Horn",
@@ -467,7 +467,7 @@
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "French Horn",
@@ -484,7 +484,7 @@
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "French Horn",
@@ -501,7 +501,7 @@
       "label": "BSx",
       "color": "#CCAD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Bari Sax",
@@ -518,7 +518,7 @@
       "label": "TSx",
       "color": "#4ACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Tenor Sax",
@@ -535,7 +535,7 @@
       "label": "TSx",
       "color": "#4ACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Tenor Sax",
@@ -552,7 +552,7 @@
       "label": "TSx",
       "color": "#4ACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Tenor Sax",
@@ -569,7 +569,7 @@
       "label": "ASx",
       "color": "#3ECC91",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Alto Sax",
@@ -586,7 +586,7 @@
       "label": "ASx",
       "color": "#3ECC91",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Alto Sax",
@@ -603,7 +603,7 @@
       "label": "ASx",
       "color": "#3ECC91",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Alto Sax",
@@ -620,7 +620,7 @@
       "label": "ASx",
       "color": "#3ECC91",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 2,
       "preset": "Alto Sax",
@@ -637,7 +637,7 @@
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trumpet",
@@ -654,7 +654,7 @@
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trumpet",
@@ -671,7 +671,7 @@
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trumpet",
@@ -688,7 +688,7 @@
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trumpet",
@@ -705,7 +705,7 @@
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trumpet",
@@ -722,7 +722,7 @@
       "label": "Tba",
       "color": "#CC5E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Tuba",
@@ -739,7 +739,7 @@
       "label": "Tba",
       "color": "#CC5E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Tuba",
@@ -756,7 +756,7 @@
       "label": "Tba",
       "color": "#CC5E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Tuba",
@@ -773,7 +773,7 @@
       "label": "Euph",
       "color": "#CC8D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Euphonium",
@@ -790,7 +790,7 @@
       "label": "Euph",
       "color": "#CC8D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Euphonium",
@@ -807,7 +807,7 @@
       "label": "Euph",
       "color": "#CC8D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Euphonium",
@@ -824,7 +824,7 @@
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trombone",
@@ -841,7 +841,7 @@
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trombone",
@@ -858,7 +858,7 @@
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trombone",
@@ -875,7 +875,7 @@
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trombone",
@@ -892,7 +892,7 @@
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Trombone",
@@ -909,7 +909,7 @@
       "label": "Vib",
       "color": "#8F969A",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Vibraphone",
@@ -926,7 +926,7 @@
       "label": "Mrmb",
       "color": "#3ECCA1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Marimba",
@@ -944,7 +944,7 @@
       "color": "#3ECC51",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "se0yefzn",
       "row": 4,
       "preset": "Snare Drum",
       "sizeScale": 1,
@@ -961,7 +961,7 @@
       "color": "#CC3E3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sb2vl71k",
       "row": 4,
       "preset": "Bass Drum",
       "sizeScale": 1,
@@ -977,7 +977,7 @@
       "label": "Timp",
       "color": "#CC7E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Timpani",
@@ -994,7 +994,7 @@
       "label": "Crash",
       "color": "#3E66CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Crash Cymbals",
@@ -1011,7 +1011,7 @@
       "label": "Bells",
       "color": "#DCDCD6",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": -1,
       "preset": "Glockenspiel (Bells)",
@@ -1027,7 +1027,7 @@
       "label": "Xyl",
       "color": "#453ECC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": -1,
       "preset": "Xylophone",
@@ -1059,7 +1059,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": -1,
       "preset": "Bass",
@@ -1108,14 +1108,255 @@
   ],
   "podium": {
     "enabled": true,
-    "x": 450,
-    "y": 512.85,
+    "x": 451,
+    "y": 523.85,
     "label": "Podium",
     "color": "#3A362B",
-    "standType": null
+    "standType": "conductor"
   },
   "edgeK": 73.86380908894866,
-  "standPositions": {},
+  "standPositions": {
+    "solo:s9dava4a": {
+      "dx": 38.27832284727219,
+      "dy": 22.099999999999998
+    },
+    "solo:s1ijvs3l": {
+      "dx": 30.54356742183023,
+      "dy": 31.94887304973544
+    },
+    "solo:sgv432in": {
+      "dx": 19.802819188926755,
+      "dy": 39.51567223483202
+    },
+    "solo:s5wgufk3": {
+      "dx": 6.871158746646577,
+      "dy": 43.662651974867295
+    },
+    "solo:smodymbl": {
+      "dx": -6.871158746646557,
+      "dy": 43.662651974867295
+    },
+    "solo:snd0qu0a": {
+      "dx": -19.802819188926755,
+      "dy": 39.51567223483202
+    },
+    "solo:sb3ci0t5": {
+      "dx": -30.54356742183024,
+      "dy": 31.948873049735433
+    },
+    "solo:s3bsmzwm": {
+      "dx": -38.278322847272186,
+      "dy": 22.100000000000012
+    },
+    "solo:s66jzgga": {
+      "dx": 41.69402255438792,
+      "dy": 14.671349059789675
+    },
+    "solo:sicgvjkk": {
+      "dx": 37.8003718046512,
+      "dy": 22.907900196878163
+    },
+    "solo:sjo0chgu": {
+      "dx": 32.025538398635035,
+      "dy": 30.463172688962544
+    },
+    "solo:s61qdo47": {
+      "dx": 24.300115195208402,
+      "dy": 36.9207854940764
+    },
+    "solo:sr4ckkg7": {
+      "dx": 15.362476705206713,
+      "dy": 41.44435196117779
+    },
+    "solo:sh3mfk9u": {
+      "dx": 5.242556649252771,
+      "dy": 43.887989242837
+    },
+    "solo:sn39bls8": {
+      "dx": -5.242556649252771,
+      "dy": 43.887989242837
+    },
+    "solo:sudds2m0": {
+      "dx": -15.362476705206726,
+      "dy": 41.44435196117778
+    },
+    "solo:sqkpoztz": {
+      "dx": -24.453764422378423,
+      "dy": 36.81919887198551
+    },
+    "solo:s41z8ei2": {
+      "dx": -32.02553839863504,
+      "dy": 30.463172688962526
+    },
+    "solo:s6drocdd": {
+      "dx": -37.800371804651206,
+      "dy": 22.907900196878153
+    },
+    "solo:s7m7wp6l": {
+      "dx": -41.69402255438792,
+      "dy": 14.671349059789673
+    },
+    "solo:shlprohf": {
+      "dx": 42.82143002174721,
+      "dy": 10.95285948474674
+    },
+    "solo:s3nm9eof": {
+      "dx": 40.52161382031299,
+      "dy": 17.65329468958753
+    },
+    "solo:sx8naios": {
+      "dx": 37.05056970104596,
+      "dy": 24.101769329821725
+    },
+    "solo:szil62dy": {
+      "dx": 32.39974829587389,
+      "dy": 30.064868374300556
+    },
+    "solo:savn76e0": {
+      "dx": 26.61911240649978,
+      "dy": 35.28544820021604
+    },
+    "solo:subnwfii": {
+      "dx": 19.83252877311271,
+      "dy": 39.500769643940565
+    },
+    "solo:s1oag7kc": {
+      "dx": 12.245825201451051,
+      "dy": 42.46975117816805
+    },
+    "solo:sjauv879": {
+      "dx": 4.141691239097362,
+      "dy": 44.005526853793995
+    },
+    "solo:s6kknjmf": {
+      "dx": -4.1254652751142284,
+      "dy": 44.00705098349385
+    },
+    "solo:sc6o5t14": {
+      "dx": -12.245825201451082,
+      "dy": 42.46975117816804
+    },
+    "solo:skzxy1mb": {
+      "dx": -19.83252877311271,
+      "dy": 39.500769643940565
+    },
+    "solo:sfm7750n": {
+      "dx": -26.619112406499777,
+      "dy": 35.28544820021604
+    },
+    "solo:snptdmto": {
+      "dx": -32.399748295873906,
+      "dy": 30.064868374300534
+    },
+    "solo:s04z3zak": {
+      "dx": -37.050569701045966,
+      "dy": 24.101769329821717
+    },
+    "solo:seifw99t": {
+      "dx": -40.52161382031299,
+      "dy": 17.65329468958753
+    },
+    "solo:s1rzmx2a": {
+      "dx": -42.82143002174721,
+      "dy": 10.952859484746751
+    },
+    "solo:sfq28pmw": {
+      "dx": 41.58346290625275,
+      "dy": 14.98184276797424
+    },
+    "solo:sk99tn77": {
+      "dx": 38.887081408675805,
+      "dy": 21.01035219873817
+    },
+    "solo:sgmna0t4": {
+      "dx": 35.19203223016224,
+      "dy": 26.742491796974008
+    },
+    "solo:so5zrl9d": {
+      "dx": 30.505317782841168,
+      "dy": 31.98539646413461
+    },
+    "solo:s102plh7": {
+      "dx": 24.881871954270398,
+      "dy": 36.53125303149746
+    },
+    "solo:svizmg5q": {
+      "dx": 18.434734817541298,
+      "dy": 40.172136515337726
+    },
+    "solo:s9zd8f58": {
+      "dx": 11.33923954992991,
+      "dy": 42.7207402373754
+    },
+    "solo:scxacs51": {
+      "dx": 3.827608765875999,
+      "dy": 44.03395747755803
+    },
+    "solo:sq6pvvn9": {
+      "dx": -3.827608765875983,
+      "dy": 44.03395747755803
+    },
+    "solo:sj9335mt": {
+      "dx": -11.339239549929891,
+      "dy": 42.7207402373754
+    },
+    "solo:sfj5v3xd": {
+      "dx": -18.43473481754128,
+      "dy": 40.172136515337726
+    },
+    "solo:snly8slv": {
+      "dx": -24.881871954270398,
+      "dy": 36.53125303149746
+    },
+    "solo:s5eydgf9": {
+      "dx": -30.505317782841157,
+      "dy": 31.985396464134613
+    },
+    "solo:skmsozrs": {
+      "dx": -35.19203223016223,
+      "dy": 26.742491796974015
+    },
+    "solo:s2z1wwyn": {
+      "dx": -38.88708140867578,
+      "dy": 21.010352198738175
+    },
+    "solo:sdxjseop": {
+      "dx": -41.58346290625274,
+      "dy": 14.981842767974246
+    },
+    "solo:s56zdwbl": {
+      "dx": 25.176562291944872,
+      "dy": 40.39679085224245
+    },
+    "solo:sjcmg3rf": {
+      "dx": 45.595215905176886,
+      "dy": 29.672146645638982
+    },
+    "solo:s4biol78": {
+      "dx": -43.41472643483045,
+      "dy": 50.108397785090226
+    },
+    "solo:saa9sw5y": {
+      "dx": -6.807001336894999,
+      "dy": 43.672700085974874
+    },
+    "solo:szcdo4b2": {
+      "dx": 15.597553532362156,
+      "dy": 41.356454439483784
+    },
+    "solo:sezgqdvu": {
+      "dx": 30.996620747248055,
+      "dy": 31.509514471842813
+    },
+    "solo:sfiga6dc": {
+      "dx": -41.20865157299783,
+      "dy": 15.983961822253706
+    },
+    "pair:sb2vl71k_se0yefzn": {
+      "dx": -20.606989570945597,
+      "dy": 52.17817533052434
+    }
+  },
   "groups": [],
   "rowSeatSpacingPct": [
     80,

@@ -1615,7 +1615,7 @@
     73,
     76
   ],
-  "showSeatRank": true,
+  "showSeatRank": false,
   "seatRankSettings": {
     "Flute": {
       "style": "default",
@@ -1632,5 +1632,6 @@
       "invert": false,
       "hidden": false
     }
-  }
+  },
+  "showMusicStand": false
 }

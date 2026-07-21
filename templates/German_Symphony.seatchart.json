@@ -3,7 +3,7 @@
   "notes": "",
   "flipped": false,
   "showLabels": true,
-  "showMusicStand": true,
+  "showMusicStand": false,
   "showLegend": false,
   "showSeatRank": false,
   "seatRankSettings": {
@@ -46,7 +46,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s1hfsnni",
       "row": 0,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -63,7 +63,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "svns0as0",
       "row": 0,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -80,7 +80,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s1smbwec",
       "row": 0,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -97,7 +97,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "st8jbwgt",
       "row": 0,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -114,7 +114,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sd9nvt4s",
       "row": 0,
       "preset": "Cello",
       "sizeScale": 1,
@@ -131,7 +131,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s7j7eczs",
       "row": 0,
       "preset": "Cello",
       "sizeScale": 1,
@@ -148,7 +148,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sf807y58",
       "row": 0,
       "preset": "Viola",
       "sizeScale": 1,
@@ -165,7 +165,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sr797ddx",
       "row": 0,
       "preset": "Viola",
       "sizeScale": 1,
@@ -182,7 +182,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "szuc803d",
       "row": 1,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -199,7 +199,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s3ubh7cl",
       "row": 1,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -216,7 +216,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "so3oeah7",
       "row": 1,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -233,7 +233,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "ssr3tagc",
       "row": 1,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -250,7 +250,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sa13i90h",
       "row": 1,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -267,7 +267,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s3oeyz7r",
       "row": 1,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -284,7 +284,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s3iamoeg",
       "row": 1,
       "preset": "Cello",
       "sizeScale": 1,
@@ -301,7 +301,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "si55u53p",
       "row": 1,
       "preset": "Cello",
       "sizeScale": 1,
@@ -318,7 +318,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "scgcxz8k",
       "row": 1,
       "preset": "Cello",
       "sizeScale": 1,
@@ -335,7 +335,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "slsb4ku5",
       "row": 1,
       "preset": "Cello",
       "sizeScale": 1,
@@ -352,7 +352,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sx2jn7f4",
       "row": 1,
       "preset": "Viola",
       "sizeScale": 1,
@@ -369,7 +369,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s9uynt8p",
       "row": 1,
       "preset": "Viola",
       "sizeScale": 1,
@@ -386,7 +386,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s8hrcxfo",
       "row": 2,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -403,7 +403,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "swtp5yaf",
       "row": 2,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -420,7 +420,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s7hx0crx",
       "row": 2,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -437,7 +437,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sgjalvm3",
       "row": 2,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -454,7 +454,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s59jid87",
       "row": 2,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -471,7 +471,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sc4cmwjy",
       "row": 2,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -488,7 +488,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "smk4cyai",
       "row": 2,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -505,7 +505,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s75jw4wd",
       "row": 2,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -522,7 +522,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s99j744n",
       "row": 2,
       "preset": "Cello",
       "sizeScale": 1,
@@ -539,7 +539,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "slvmll52",
       "row": 2,
       "preset": "Cello",
       "sizeScale": 1,
@@ -556,7 +556,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "ss8exhee",
       "row": 2,
       "preset": "Cello",
       "sizeScale": 1,
@@ -573,7 +573,7 @@
       "color": "#79CC3E",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s6udla1j",
       "row": 2,
       "preset": "Cello",
       "sizeScale": 1,
@@ -590,7 +590,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s37lddf0",
       "row": 2,
       "preset": "Viola",
       "sizeScale": 1,
@@ -607,7 +607,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "skioyx2d",
       "row": 2,
       "preset": "Viola",
       "sizeScale": 1,
@@ -624,7 +624,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "spzvs9va",
       "row": 2,
       "preset": "Viola",
       "sizeScale": 1,
@@ -641,7 +641,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "ss3rlinj",
       "row": 2,
       "preset": "Viola",
       "sizeScale": 1,
@@ -658,7 +658,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s6bc6nw5",
       "row": 3,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -675,7 +675,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "so3c5nob",
       "row": 3,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -692,7 +692,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s7kntr6k",
       "row": 3,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -709,7 +709,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "slubhyzm",
       "row": 3,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -726,7 +726,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sdecs5lu",
       "row": 3,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -743,7 +743,7 @@
       "color": "#3ECCB1",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "skfni88a",
       "row": 3,
       "preset": "Violin 2",
       "sizeScale": 1,
@@ -755,11 +755,11 @@
     {
       "id": "sbonpra5",
       "x": 281.87456511452956,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Flute",
@@ -777,11 +777,11 @@
     {
       "id": "sepuop6h",
       "x": 330.33718645060793,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Flute",
@@ -799,11 +799,11 @@
     {
       "id": "szhfbiso",
       "x": 378.7998077866863,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Flute",
@@ -821,11 +821,11 @@
     {
       "id": "skw7mxmj",
       "x": 427.26242912276473,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Fl",
       "color": "#3E56CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Flute",
@@ -843,11 +843,11 @@
     {
       "id": "s0ambcf1",
       "x": 475.7250504588431,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Ob",
       "color": "#3E76CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Oboe",
@@ -865,11 +865,11 @@
     {
       "id": "sgdbrci9",
       "x": 524.1876717949215,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Ob",
       "color": "#3E76CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Oboe",
@@ -887,11 +887,11 @@
     {
       "id": "shun16sa",
       "x": 572.6502931309999,
-      "y": 241.57759864796958,
+      "y": 232.57759864796958,
       "label": "Ob",
       "color": "#3E76CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Oboe",
@@ -913,7 +913,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Bass",
@@ -930,7 +930,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Bass",
@@ -947,7 +947,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 3,
       "preset": "Bass",
@@ -965,7 +965,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "ss85wbtg",
       "row": 3,
       "preset": "Viola",
       "sizeScale": 1,
@@ -982,7 +982,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s34rt57r",
       "row": 3,
       "preset": "Viola",
       "sizeScale": 1,
@@ -999,7 +999,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sjmpjoiz",
       "row": 3,
       "preset": "Viola",
       "sizeScale": 1,
@@ -1016,7 +1016,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s6mue6e4",
       "row": 3,
       "preset": "Viola",
       "sizeScale": 1,
@@ -1033,7 +1033,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sv0wrcjh",
       "row": 4,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -1050,7 +1050,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s211vc4x",
       "row": 4,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -1067,7 +1067,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "soosdmvj",
       "row": 4,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -1084,7 +1084,7 @@
       "color": "#3EA6CC",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "srt9jrhz",
       "row": 4,
       "preset": "Violin 1",
       "sizeScale": 1,
@@ -1096,11 +1096,11 @@
     {
       "id": "sbilfd58",
       "x": 280.80303434267734,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Clarinet",
@@ -1118,11 +1118,11 @@
     {
       "id": "sfgmtej5",
       "x": 329.7138987046311,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Clarinet",
@@ -1140,11 +1140,11 @@
     {
       "id": "sasfdesr",
       "x": 378.6247630665848,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Clarinet",
@@ -1162,11 +1162,11 @@
     {
       "id": "s5gd33wf",
       "x": 427.5356274285386,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Cl",
       "color": "#3EC6CC",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Clarinet",
@@ -1184,11 +1184,11 @@
     {
       "id": "s1mh46rx",
       "x": 476.44649179049236,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Bsn",
       "color": "#CCBD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bassoon",
@@ -1206,11 +1206,11 @@
     {
       "id": "sa95oa4l",
       "x": 525.3573561524461,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Bsn",
       "color": "#CCBD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bassoon",
@@ -1228,11 +1228,11 @@
     {
       "id": "soaf35rc",
       "x": 574.2682205143999,
-      "y": 188.78907846128908,
+      "y": 172.78907846128908,
       "label": "Bsn",
       "color": "#CCBD3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bassoon",
@@ -1254,7 +1254,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bass",
@@ -1271,7 +1271,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bass",
@@ -1288,7 +1288,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bass",
@@ -1305,7 +1305,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bass",
@@ -1322,7 +1322,7 @@
       "label": "Bs",
       "color": "#CC6E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 4,
       "preset": "Bass",
@@ -1340,7 +1340,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "s8jugtu7",
       "row": 4,
       "preset": "Viola",
       "sizeScale": 1,
@@ -1357,7 +1357,7 @@
       "color": "#3ECC5C",
       "hidden": false,
       "stand": false,
-      "standPartner": null,
+      "standPartner": "sduiuew3",
       "row": 4,
       "preset": "Viola",
       "sizeScale": 1,
@@ -1369,11 +1369,11 @@
     {
       "id": "sa78v0v7",
       "x": 196.35000000000002,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "French Horn",
@@ -1386,11 +1386,11 @@
     {
       "id": "sa0iqpuo",
       "x": 252.26250000000005,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "French Horn",
@@ -1403,11 +1403,11 @@
     {
       "id": "s2sl1i90",
       "x": 308.175,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "French Horn",
@@ -1420,11 +1420,11 @@
     {
       "id": "syssbwwf",
       "x": 364.0875,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "French Horn",
@@ -1437,11 +1437,11 @@
     {
       "id": "sarg7kjp",
       "x": 420,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Hn",
       "color": "#BACC3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "French Horn",
@@ -1454,11 +1454,11 @@
     {
       "id": "sto0tgvp",
       "x": 475.9125,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "Trumpet",
@@ -1471,11 +1471,11 @@
     {
       "id": "s4ior9i1",
       "x": 531.825,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "Trumpet",
@@ -1488,11 +1488,11 @@
     {
       "id": "sqyi46s1",
       "x": 587.7375,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "Trumpet",
@@ -1505,11 +1505,11 @@
     {
       "id": "strau8v8",
       "x": 643.65,
-      "y": 134.0043818221027,
+      "y": 116.00438182210269,
       "label": "Tpt",
       "color": "#3ECCC1",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 5,
       "preset": "Trumpet",
@@ -1522,11 +1522,11 @@
     {
       "id": "sy3ais9b",
       "x": 439.25,
-      "y": 52.299999999999955,
+      "y": 34.299999999999955,
       "label": "Timp",
       "color": "#CC7E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 6,
       "preset": "Timpani",
@@ -1539,11 +1539,11 @@
     {
       "id": "snnslma6",
       "x": 536.125,
-      "y": 73.29999999999995,
+      "y": 55.299999999999955,
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 6,
       "preset": "Trombone",
@@ -1556,11 +1556,11 @@
     {
       "id": "st6sd315",
       "x": 600,
-      "y": 73.29999999999995,
+      "y": 55.299999999999955,
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 6,
       "preset": "Trombone",
@@ -1573,11 +1573,11 @@
     {
       "id": "sitm4oe6",
       "x": 663.875,
-      "y": 73.29999999999995,
+      "y": 55.299999999999955,
       "label": "Tbn",
       "color": "#CC9D3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 6,
       "preset": "Trombone",
@@ -1590,11 +1590,11 @@
     {
       "id": "s9kwomha",
       "x": 727.75,
-      "y": 73.29999999999995,
+      "y": 55.299999999999955,
       "label": "Tba",
       "color": "#CC5E3E",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": 6,
       "preset": "Tuba",
@@ -1606,12 +1606,12 @@
     },
     {
       "id": "sxah1vz7",
-      "x": 185,
-      "y": 257,
+      "x": 182,
+      "y": 253,
       "label": "Hrp",
       "color": "#3ECC61",
       "hidden": false,
-      "stand": false,
+      "stand": true,
       "standPartner": null,
       "row": -1,
       "preset": "Harp",
@@ -1690,14 +1690,267 @@
   ],
   "podium": {
     "enabled": true,
-    "x": 450,
-    "y": 519.85,
+    "x": 449,
+    "y": 529.85,
     "label": "Podium",
     "color": "#3A362B",
-    "standType": null
+    "standType": "conductor"
   },
   "edgeK": 73.86380908894866,
-  "standPositions": {},
+  "standPositions": {
+    "pair:s1hfsnni_svns0as0": {
+      "dx": 30.56961096449996,
+      "dy": 24.378451252676477
+    },
+    "pair:s3ubh7cl_szuc803d": {
+      "dx": 35.20083840540452,
+      "dy": 17.02089820064142
+    },
+    "pair:s8hrcxfo_swtp5yaf": {
+      "dx": 36.87424198793831,
+      "dy": 13.003856267083506
+    },
+    "pair:s7hx0crx_sgjalvm3": {
+      "dx": 30.13159984929224,
+      "dy": 24.917798669267146
+    },
+    "pair:s6bc6nw5_so3c5nob": {
+      "dx": 37.66277777543349,
+      "dy": 10.503578925219369
+    },
+    "pair:s7kntr6k_slubhyzm": {
+      "dx": 33.11517705835845,
+      "dy": 20.789301296425766
+    },
+    "pair:s211vc4x_sv0wrcjh": {
+      "dx": 37.98056557844881,
+      "dy": 9.289060143047232
+    },
+    "pair:soosdmvj_srt9jrhz": {
+      "dx": 34.64798804766778,
+      "dy": 18.119793714296804
+    },
+    "pair:s1smbwec_st8jbwgt": {
+      "dx": 11.524927319466368,
+      "dy": 37.3628967062381
+    },
+    "pair:so3oeah7_ssr3tagc": {
+      "dx": 24.34924904670936,
+      "dy": 30.59287614562127
+    },
+    "pair:s3oeyz7r_sa13i90h": {
+      "dx": 8.688434510151483,
+      "dy": 38.12244884268072
+    },
+    "pair:s59jid87_sc4cmwjy": {
+      "dx": 19.69535294656341,
+      "dy": 33.777256731568585
+    },
+    "pair:s75jw4wd_smk4cyai": {
+      "dx": 6.844801797210704,
+      "dy": 38.496216546004895
+    },
+    "pair:sdecs5lu_skfni88a": {
+      "dx": 25.827994443505162,
+      "dy": 29.355147811351017
+    },
+    "pair:s7j7eczs_sd9nvt4s": {
+      "dx": -11.524927319466356,
+      "dy": 37.3628967062381
+    },
+    "pair:sf807y58_sr797ddx": {
+      "dx": -30.56961096449996,
+      "dy": 24.378451252676477
+    },
+    "pair:s9uynt8p_sx2jn7f4": {
+      "dx": -35.20083840540452,
+      "dy": 17.020898200641415
+    },
+    "pair:scgcxz8k_slsb4ku5": {
+      "dx": -24.349249046709367,
+      "dy": 30.59287614562126
+    },
+    "pair:s3iamoeg_si55u53p": {
+      "dx": -8.688434510151493,
+      "dy": 38.12244884268072
+    },
+    "pair:s99j744n_slvmll52": {
+      "dx": -6.844801797210689,
+      "dy": 38.496216546004895
+    },
+    "pair:s6udla1j_ss8exhee": {
+      "dx": -19.6953529465634,
+      "dy": 33.7772567315686
+    },
+    "pair:s37lddf0_skioyx2d": {
+      "dx": -30.131599849292222,
+      "dy": 24.917798669267167
+    },
+    "pair:spzvs9va_ss3rlinj": {
+      "dx": -36.8742419879383,
+      "dy": 13.003856267083522
+    },
+    "pair:s6mue6e4_sjmpjoiz": {
+      "dx": -37.66277777543349,
+      "dy": 10.503578925219372
+    },
+    "pair:s34rt57r_ss85wbtg": {
+      "dx": -33.11517705835845,
+      "dy": 20.789301296425766
+    },
+    "pair:s8jugtu7_sduiuew3": {
+      "dx": -37.98056557844881,
+      "dy": 9.289060143047237
+    },
+    "solo:sbonpra5": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sepuop6h": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:szhfbiso": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:skw7mxmj": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s0ambcf1": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sgdbrci9": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:shun16sa": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sbilfd58": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sfgmtej5": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sasfdesr": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s5gd33wf": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s1mh46rx": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sa95oa4l": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:soaf35rc": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sa78v0v7": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sa0iqpuo": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s2sl1i90": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:syssbwwf": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sarg7kjp": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sto0tgvp": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s4ior9i1": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sqyi46s1": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:strau8v8": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sy3ais9b": {
+      "dx": 0,
+      "dy": 66.3
+    },
+    "solo:snnslma6": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:st6sd315": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sitm4oe6": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:s9kwomha": {
+      "dx": 0,
+      "dy": 44.2
+    },
+    "solo:sh4ldzu1": {
+      "dx": -21.388057898167858,
+      "dy": 38.68062795954352
+    },
+    "solo:svnncg61": {
+      "dx": -26.728509083137165,
+      "dy": 35.202653340233525
+    },
+    "solo:swsjyx84": {
+      "dx": -31.513267029768276,
+      "dy": 30.992805634703682
+    },
+    "solo:s39nsb2p": {
+      "dx": -22.89411024673781,
+      "dy": 37.808725395207595
+    },
+    "solo:sgg78pcr": {
+      "dx": -27.290200536014243,
+      "dy": 34.76902291845614
+    },
+    "solo:swfzjmw1": {
+      "dx": -31.287263613983225,
+      "dy": 31.22094065765991
+    },
+    "solo:s5k5nhxi": {
+      "dx": -34.8268559037528,
+      "dy": 27.216357358383554
+    },
+    "solo:sytxosgc": {
+      "dx": -37.85722279697237,
+      "dy": 22.813826555411424
+    },
+    "solo:sxah1vz7": {
+      "dx": 32.710070550143115,
+      "dy": 39.128650431680626
+    }
+  },
   "groups": [],
   "rowSeatSpacingPct": [
     100,
