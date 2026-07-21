@@ -2,8 +2,8 @@
   { "file": "String_Orchestra.seatchart.json", "name": "String Orchestra" },
   { "file": "String_Orchestra_LG.seatchart.json", "name": "String Orchestra LG" },
   {"file": "Chamber_Orchestra.seatchart.json", "name": "Chamber Orchestra"},
-  {"file": "Symphony-Orchestra.seatchart.json", "name": "Symphony Orchestra"},
-  {"file": "German_Symphony.seatchart.json", "name": "German Orchestra"},
+  {"file": "Symphony_Orchestra.seatchart.json", "name": "Symphony Orchestra"},
+  {"file": "German_Symphony.seatchart.json", "name": "German Symphony"},
   {"file": "Antiphonal_Full_Orchestra.seatchart.json", "name": "Antiphonal Full Orchestra"},
   {"file": "Wind_Ensemble.seatchart.json", "name": "Wind Ensemble"}
 ]
