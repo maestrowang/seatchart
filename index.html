@@ -642,6 +642,55 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   .confirm-box p{ font-size:13.5px; line-height:1.5; color:var(--ink); margin:0 0 16px; }
   .confirm-box .btn-row button{ flex:1; }
 
+  .roster-toggle-btn{
+    position:fixed; top:16px; right:16px; z-index:80;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    padding:9px 16px; border-radius:8px; border:1px solid var(--line);
+    background:var(--brass); color:#fff; cursor:pointer;
+    box-shadow:0 6px 16px rgba(0,0,0,0.18);
+  }
+  .roster-toggle-btn:hover{ background:var(--brass-deep, #A9772A); }
+
+  .roster-panel{
+    position:fixed; top:64px; right:16px; z-index:81;
+    width:300px; max-height:calc(100vh - 100px); overflow-y:auto;
+    background:var(--paper); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.3);
+    display:none;
+  }
+  .roster-panel.show{ display:block; }
+  .roster-panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-bottom:1px solid var(--line);
+    font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:var(--ink);
+    position:sticky; top:0; background:var(--paper); border-radius:12px 12px 0 0;
+  }
+  .roster-panel-close{
+    background:none; border:none; cursor:pointer; font-size:15px; color:var(--ink-soft); padding:2px 6px;
+  }
+  .roster-panel-body{ padding:12px 14px; }
+  .roster-name-row{
+    display:flex; align-items:center; gap:8px;
+    padding:5px 8px; border:1px solid var(--line); border-radius:6px;
+    margin-bottom:4px; background:#fff; font-size:12.5px; cursor:grab;
+  }
+  .roster-name-row.dragging{ opacity:0.4; }
+  .roster-name-row .drag-handle{ color:var(--ink-soft); font-size:12px; user-select:none; }
+  .roster-name-row .roster-name-text{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .roster-name-row .roster-rank-num{ color:var(--ink-soft); font-size:11px; flex-shrink:0; }
+  .roster-name-row.unassigned .roster-name-text{ color:#C23B3B; font-weight:600; }
+  .roster-name-row.unassigned{ border-color:#E3AFAF; background:#FDF3F3; }
+
+  .inline-seat-editor{
+    position:fixed; z-index:90;
+    font-family:'Inter',sans-serif; font-weight:600; text-align:center;
+    border:2px solid var(--brass); border-radius:6px;
+    background:#fff; color:var(--ink);
+    padding:1px 4px; outline:none;
+    box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    transform:translate(-50%,-50%);
+  }
+
   ::-webkit-scrollbar{ width:9px; height:9px; }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
 </style>
@@ -776,6 +825,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         <div class="empty-hint" id="seatRankNoSections" style="display:none;">Assign an instrument to some seats first.</div>
       </div>
       <div class="checkline"><input type="checkbox" id="showLabels" checked> <label for="showLabels">Show seat labels</label></div>
+      <div class="checkline"><input type="checkbox" id="showRosterNames" checked> <label for="showRosterNames">Show roster names</label></div>
       <div class="checkline"><input type="checkbox" id="showMusicStand" checked> <label for="showMusicStand">Show music stand</label></div>
       <div class="checkline"><input type="checkbox" id="showLegend" checked> <label for="showLegend">Show section legend</label></div>
       <div class="checkline"><input type="checkbox" id="flipChart"> <label for="flipChart">Flip (performer's view)</label></div>
@@ -831,7 +881,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">3.8.0</span>
+        v<span id="appVersion">4.0.0</span>
       </div>
     </div>
   </aside>
@@ -847,6 +897,33 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <div class="legend" id="legend"></div>
     </div>
   </main>
+</div>
+
+<button id="rosterToggleBtn" class="roster-toggle-btn" title="Roster">Roster</button>
+
+<div class="roster-panel" id="rosterPanel">
+  <div class="roster-panel-head">
+    <span>Roster</span>
+    <button id="rosterPanelCloseBtn" class="roster-panel-close">✕</button>
+  </div>
+  <div class="roster-panel-body">
+    <label class="field"><span>Section</span>
+      <select id="rosterSectionSelect"></select>
+    </label>
+    <div class="empty-hint" id="rosterNoSections" style="display:none;">Assign an instrument to some seats first.</div>
+    <div id="rosterSectionContent" style="display:none;">
+      <div class="meta-tag" style="display:block; margin:10px 0 6px;">NAMES (in rank order)</div>
+      <div id="rosterNameList"></div>
+      <button type="button" class="block" id="rosterEditListBtn" style="margin-top:8px;">Paste / Edit Names</button>
+      <div id="rosterPasteWrap" style="display:none; margin-top:8px;">
+        <textarea id="rosterPasteArea" rows="8" placeholder="Paste names here, one per line" style="width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:6px;"></textarea>
+        <div class="btn-row" style="margin-top:6px;">
+          <button type="button" id="rosterPasteCancelBtn">Cancel</button>
+          <button type="button" id="rosterPasteApplyBtn" class="primary">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="hint-toast" id="toast"></div>
@@ -981,9 +1058,11 @@ let chart = {
   flipped: false,
   showLabels: true,
   showMusicStand: true,
+  showRosterNames: true,
   showLegend: true,
   showSeatRank: false,
   seatRankSettings: {}, // { [presetName]: { style: 'default'|'outer', invert: bool, hidden: bool } }
+  rosters: {}, // { [presetName]: string[] } -- ordered names, index 0 = rank 1
   seatSize: 100,
   seatSpacing: 100, // percentage; scales each arc row's bulge without moving its endpoints
   rowSpacing: 100, // percentage; scales the depth gap between consecutive rows
@@ -1306,7 +1385,12 @@ function podiumPoint(){
 //    row's seat count in this group) before any row's remaining, deeper-in seats.
 //  - Inverting simply reverses the whole computed sequence.
 // Seats that are hidden or have no instrument assigned are left out of ranking entirely.
-function computeSeatRanks(){
+// Core ranking logic for every section, with NO hidden/single-seat filtering applied --
+// every seat with an instrument assigned gets a rank here, including sections with just
+// one seat and sections whose rank badges are currently hidden. This is what roster name
+// assignment uses, since a name should still map to seat position even when rank NUMBERS
+// aren't being displayed. computeSeatRanks() (below) wraps this for the display path.
+function computeAllSeatRanks(){
   const ranks = new Map();
   const groups = {};
   chart.seats.forEach(s=>{
@@ -1342,14 +1426,12 @@ function computeSeatRanks(){
 
   Object.entries(groups).forEach(([presetName, groupSeats])=>{
     const settings = (chart.seatRankSettings && chart.seatRankSettings[presetName]) || {};
-    // A section with only one seat has nothing meaningful to rank, so it's hidden by
-    // default -- this re-evaluates live from the current group size (not a saved flag),
-    // so a section automatically starts showing once it grows to 2+ seats, and
-    // automatically hides again if it shrinks back down to 1.
-    const effectiveHidden = groupSeats.length <= 1 ? true : !!settings.hidden;
-    if(effectiveHidden) return;
     const style = settings.style || 'default';
     const invert = !!settings.invert;
+    if(groupSeats.length <= 1){
+      groupSeats.forEach(s=>ranks.set(s.id, 1));
+      return;
+    }
     // A group made up entirely of straight-row seats ranks from the center outward
     // (innermost = rank 1); curved (arc) rows keep the existing outermost-first
     // convention. Seats' EFFECTIVE shape (accounting for the custom straight/curved
@@ -1366,6 +1448,79 @@ function computeSeatRanks(){
     finalOrder.forEach((s,i)=> ranks.set(s.id, i+1));
   });
   return ranks;
+}
+
+// Display wrapper: filters computeAllSeatRanks() down to only the seats whose rank
+// badge should actually be drawn -- excluding sections marked hidden, and sections with
+// only 1 seat (which auto-hide, re-evaluated live from current group size each call).
+function computeSeatRanks(){
+  const all = computeAllSeatRanks();
+  const groupSizes = {};
+  chart.seats.forEach(s=>{
+    if(s.hidden || !s.preset) return;
+    groupSizes[s.preset] = (groupSizes[s.preset]||0) + 1;
+  });
+  const filtered = new Map();
+  chart.seats.forEach(s=>{
+    if(s.hidden || !s.preset || !all.has(s.id)) return;
+    const settings = (chart.seatRankSettings && chart.seatRankSettings[s.preset]) || {};
+    const effectiveHidden = groupSizes[s.preset] <= 1 ? true : !!settings.hidden;
+    if(!effectiveHidden) filtered.set(s.id, all.get(s.id));
+  });
+  return filtered;
+}
+
+// Maps each seat to a roster name, based on the seat's rank within its section (via
+// computeAllSeatRanks, unfiltered -- so a name still maps to a seat even when rank
+// badges themselves are hidden). Recomputed fresh every time it's called, so adding or
+// removing seats immediately shifts which names are assigned versus left over.
+function getRosterAssignments(){
+  const ranks = computeAllSeatRanks();
+  const assignments = new Map();
+  chart.seats.forEach(seat=>{
+    if(seat.hidden || !seat.preset) return;
+    const rank = ranks.get(seat.id);
+    if(rank === undefined) return;
+    const names = (chart.rosters && chart.rosters[seat.preset]) || [];
+    const name = names[rank - 1];
+    if(rank - 1 < names.length && name) assignments.set(seat.id, name);
+  });
+  return assignments;
+}
+
+// Splits a name onto up to two lines at its first space (e.g. "Alice Chen" ->
+// ["Alice","Chen"]), so first+last names wrap cleanly instead of overlapping
+// neighboring seats. A name with no space renders on a single line.
+function wrapNameForDisplay(name){
+  const idx = name.indexOf(' ');
+  if(idx === -1) return [name];
+  return [name.slice(0, idx), name.slice(idx + 1)];
+}
+
+// Draws one or more lines of text centered at (x,y) with a translucent, rounded-corner
+// background chip sized to fit -- keeps names legible over the seat's color/icon and
+// the stage floor texture, however long or short the name is.
+function drawTextChip(ctx, lines, x, y, fontPx, textColor){
+  ctx.font = `600 ${fontPx}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lineHeight = fontPx * 1.18;
+  const widths = lines.map(l => ctx.measureText(l).width);
+  const maxWidth = Math.max(...widths, 1);
+  const padX = fontPx * 0.55, padY = fontPx * 0.34;
+  const boxW = maxWidth + padX * 2;
+  const boxH = lines.length * lineHeight + padY * 2 - (lineHeight - fontPx) * 0.4;
+  const boxX = x - boxW / 2, boxY = y - boxH / 2;
+  ctx.fillStyle = 'rgba(247,243,233,0.85)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, Math.min(6, boxH / 2));
+  else ctx.rect(boxX, boxY, boxW, boxH);
+  ctx.fill();
+  ctx.fillStyle = textColor || '#242019';
+  const startY = y - (lines.length - 1) * lineHeight / 2;
+  lines.forEach((line, i)=>{
+    ctx.fillText(line, x, startY + i * lineHeight);
+  });
 }
 
 // Reshapes one arc row's curve to a given bulge depth (sagitta) while keeping its first
@@ -2792,6 +2947,7 @@ function resetRowsToDefault(){
   chart.groups = [];
   chart.showSeatRank = false;
   chart.seatRankSettings = {};
+  chart.rosters = {};
   chart.podium = { enabled: false, x: null, y: null, label: 'Podium', color: '#3A362B', standType: null };
   chart.title = 'Untitled Seating Chart';
   chart.notes = '';
@@ -2812,6 +2968,7 @@ function resetRowsToDefault(){
   refreshAutoGroupList();
   refreshCustomGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   toast('Rows reset to default');
 }
 
@@ -2848,6 +3005,7 @@ function render(){
   const r = seatRadius();
   drawPodium();
   const seatRanks = chart.showSeatRank ? computeSeatRanks() : null;
+  const rosterAssignments = getRosterAssignments();
 
   // --- pass 1: music stands (drawn first so chairs sit on top) ---
   if(chart.showMusicStand !== false){
@@ -2926,7 +3084,29 @@ function render(){
       ctx.restore();
     }
 
-    if(chart.showLabels && seat.label){
+    const hasName = chart.showRosterNames !== false && rosterAssignments.has(seat.id);
+    const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
+
+    if(hasName){
+      // The name takes over the seat's primary label position; the instrument label
+      // (if shown) is demoted to a smaller line below, out of the name's way.
+      ctx.save();
+      if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
+      const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
+      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34));
+      ctx.restore();
+
+      if(chart.showLabels && seat.label){
+        ctx.save();
+        if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
+        ctx.fillStyle = '#5A5548';
+        ctx.font = `600 ${Math.max(9, sr*0.26)}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(seat.label, seat.x, seat.y + sr*0.62);
+        ctx.restore();
+      }
+    } else if(chart.showLabels && seat.label){
       ctx.save();
       if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
       const hasIcon = !!INSTRUMENT_ICON_DRAWERS[seat.preset];
@@ -2937,7 +3117,6 @@ function render(){
       ctx.font = `600 ${Math.max(10, sr*0.62)}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
       ctx.fillText(seat.label, seat.x + off.dx*sr, seat.y + off.dy*sr + 1);
       ctx.restore();
     }
@@ -3041,6 +3220,123 @@ function seatAt(x,y){
 
 function getSeat(id){ return chart.seats.find(s=>s.id===id); }
 
+// Decides which piece of text on a seat a click landed on: the roster name (if one's
+// showing) or the instrument label -- both can coexist (name as the primary chip,
+// label demoted below it), so this picks whichever is closer to the click's Y position.
+function determineTextEditTarget(seat, logicalY){
+  const sr = seatRadius();
+  const hasName = chart.showRosterNames !== false && getRosterAssignments().has(seat.id);
+  const hasLabel = chart.showLabels && !!seat.label;
+  if(!hasName && !hasLabel) return null;
+  if(hasName && !hasLabel) return 'name';
+  if(!hasName && hasLabel) return 'label';
+  // both exist: name sits at the primary position, label sits below it
+  const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
+  const nameY = seat.y + off.dy*sr + 1;
+  const labelY = seat.y + sr*0.62;
+  return Math.abs(logicalY - labelY) < Math.abs(logicalY - nameY) ? 'label' : 'name';
+}
+
+// Writes an edited roster name back into chart.rosters at this seat's rank position,
+// padding any skipped ranks with empty placeholders (treated as "no name" everywhere
+// else), then trims trailing empty placeholders so the array doesn't grow unnecessarily.
+function applyRosterNameEdit(seat, newValue){
+  const ranks = computeAllSeatRanks();
+  const rank = ranks.get(seat.id);
+  if(rank === undefined || !seat.preset) return;
+  pushHistory();
+  if(!chart.rosters) chart.rosters = {};
+  if(!chart.rosters[seat.preset]) chart.rosters[seat.preset] = [];
+  const arr = chart.rosters[seat.preset];
+  while(arr.length < rank) arr.push('');
+  arr[rank-1] = newValue.trim();
+  while(arr.length > 0 && arr[arr.length-1] === '') arr.pop();
+  if(rosterPanelOpen) renderRosterNameList();
+}
+
+// Opens a small text input positioned exactly over a seat's name or label text on the
+// chart itself, pre-filled with the current value. Enter/blur commits the edit back to
+// the right place (seat.label or the roster array) and refreshes every dependent view
+// (sidebar inspector, roster panel list, the chart itself); Escape cancels untouched.
+function startInlineTextEdit(seat, target){
+  const existing = document.querySelector('.inline-seat-editor');
+  if(existing) existing.remove();
+
+  const sr = seatRadius();
+  const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
+  const hasName = chart.showRosterNames !== false && getRosterAssignments().has(seat.id);
+  let localX, localY, currentValue, fontPx;
+
+  if(target === 'name'){
+    localX = seat.x + off.dx*sr;
+    localY = seat.y + off.dy*sr + 1;
+    currentValue = getRosterAssignments().get(seat.id) || '';
+    fontPx = Math.max(9, sr*0.34);
+  } else {
+    currentValue = seat.label || '';
+    if(hasName){
+      localX = seat.x;
+      localY = seat.y + sr*0.62 + Math.max(9, sr*0.26)*0.6;
+      fontPx = Math.max(9, sr*0.26);
+    } else {
+      localX = seat.x + off.dx*sr;
+      localY = seat.y + off.dy*sr + 1;
+      fontPx = Math.max(10, sr*0.62);
+    }
+  }
+
+  const screenLocal = flipPoint(localX, localY);
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width, scaleY = rect.height / canvas.height;
+  const pageX = rect.left + screenLocal.x * scaleX;
+  const pageY = rect.top + screenLocal.y * scaleY;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentValue;
+  input.className = 'inline-seat-editor';
+  input.style.left = pageX + 'px';
+  input.style.top = pageY + 'px';
+  input.style.width = Math.max(target === 'name' ? 150 : 64, fontPx * scaleY * (target === 'name' ? 12 : 6)) + 'px';
+  input.style.fontSize = Math.max(11, fontPx * scaleY) + 'px';
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+
+  let settled = false;
+  function commit(){
+    if(settled) return;
+    settled = true;
+    const val = input.value;
+    if(target === 'name'){
+      applyRosterNameEdit(seat, val);
+    } else {
+      pushHistory();
+      seat.label = val;
+      if(selectedId === seat.id) refreshSelectionUI();
+    }
+    cleanup();
+    render();
+  }
+  function cancel(){
+    if(settled) return;
+    settled = true;
+    cleanup();
+  }
+  function cleanup(){
+    input.removeEventListener('keydown', onKeydown);
+    input.removeEventListener('blur', commit);
+    input.remove();
+  }
+  function onKeydown(e){
+    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
+    else if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
+    e.stopPropagation();
+  }
+  input.addEventListener('keydown', onKeydown);
+  input.addEventListener('blur', commit);
+}
+
 // Renumbers visible seats within a row that still use a plain sequential number as
 // their label (e.g. "3"), so hiding/showing/deleting a numbered seat keeps the rest
 // counting up with no gaps. Custom labels (instrument abbreviations, etc.) are left alone.
@@ -3060,6 +3356,7 @@ function renumberRows(rowIndexes){
 }
 
 let podiumSelected = false;
+let rosterPanelOpen = false;
 
 function setSelection(ids){
   selection = new Set(ids.filter(id=>getSeat(id)));
@@ -3469,6 +3766,19 @@ canvas.addEventListener('mousedown', e=>{
   selectCurrent = { x, y };
 });
 
+canvas.addEventListener('dblclick', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX-rect.left) * (canvas.width/rect.width);
+  const y = (e.clientY-rect.top) * (canvas.height/rect.height);
+  const seat = seatAt(x, y);
+  if(!seat || seat.hidden) return;
+  const logical = flipPoint(x, y); // flipPoint is its own inverse -- converts click to logical space
+  const target = determineTextEditTarget(seat, logical.y);
+  if(!target) return;
+  e.preventDefault();
+  startInlineTextEdit(seat, target);
+});
+
 canvas.addEventListener('mousemove', e=>{
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX-rect.left) * (canvas.width/rect.width);
@@ -3612,6 +3922,15 @@ document.addEventListener('click', (e)=>{
   updateModeUI(addBtn);
 });
 
+document.addEventListener('click', (e)=>{
+  if(!rosterPanelOpen) return;
+  const panel = document.getElementById('rosterPanel');
+  const toggleBtn = document.getElementById('rosterToggleBtn');
+  if(panel.contains(e.target) || e.target === toggleBtn) return;
+  rosterPanelOpen = false;
+  panel.classList.remove('show');
+});
+
 // ---------------- FORM WIRING ----------------
 document.getElementById('addRowBtn').onclick = ()=>{
   pushHistory();
@@ -3708,6 +4027,7 @@ document.getElementById('clearLabelBtn').onclick = ()=>{
   refreshSelectionUI();
   refreshAutoGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   render();
 };
 document.getElementById('batchClearLabelBtn').onclick = ()=>{
@@ -3722,6 +4042,7 @@ document.getElementById('batchClearLabelBtn').onclick = ()=>{
   refreshSelectionUI();
   refreshAutoGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   render();
 };
 document.getElementById('podiumLabelInput').oninput = e=>{
@@ -3744,6 +4065,7 @@ document.getElementById('presetItemSelect').onchange = (e)=>{
   refreshSelectionUI();
   refreshAutoGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   render();
 };
 document.getElementById('standCheck').onchange = e=>{
@@ -3794,6 +4116,7 @@ document.getElementById('deleteSeatBtn').onclick = ()=>{
   refreshAutoGroupList();
   refreshCustomGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
 };
 
 document.getElementById('batchPresetCategorySelect').onchange = (e)=>{
@@ -3817,6 +4140,7 @@ document.getElementById('batchPresetItemSelect').onchange = (e)=>{
   refreshSelectionUI();
   refreshAutoGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   render();
 };
 document.getElementById('batchStandCheck').onchange = e=>{
@@ -3878,6 +4202,7 @@ document.getElementById('batchDeleteBtn').onclick = ()=>{
   refreshAutoGroupList();
   refreshCustomGroupList();
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
 };
 document.getElementById('clearSelectionBtn').onclick = ()=>{ clearSelection(); };
 
@@ -3903,6 +4228,7 @@ document.getElementById('podiumDisableBtn').onclick = ()=>{
 
 document.getElementById('showLabels').onchange = e=>{ pushHistory(); chart.showLabels=e.target.checked; render(); };
 document.getElementById('showMusicStand').onchange = e=>{ pushHistory(); chart.showMusicStand=e.target.checked; render(); };
+document.getElementById('showRosterNames').onchange = e=>{ pushHistory(); chart.showRosterNames=e.target.checked; render(); };
 document.getElementById('showLegend').onchange = e=>{ pushHistory(); chart.showLegend=e.target.checked; render(); };
 document.getElementById('showSeatRank').onchange = e=>{
   pushHistory();
@@ -3966,6 +4292,116 @@ function loadSeatRankSectionControls(){
 
 document.getElementById('seatRankSectionSelect').onchange = loadSeatRankSectionControls;
 document.getElementById('seatRankStyle').onchange = e=>{ pushHistory(); currentSeatRankSection().style = e.target.value; render(); };
+
+// ---------------- ROSTER PANEL ----------------
+
+function refreshRosterSectionSelect(){
+  const sectionSelect = document.getElementById('rosterSectionSelect');
+  const content = document.getElementById('rosterSectionContent');
+  const noSections = document.getElementById('rosterNoSections');
+  const names = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
+  const prevValue = sectionSelect.value;
+  sectionSelect.innerHTML = '';
+  if(names.length === 0){
+    content.style.display = 'none';
+    noSections.style.display = 'block';
+    return;
+  }
+  noSections.style.display = 'none';
+  content.style.display = 'block';
+  names.forEach(name=>{
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sectionSelect.appendChild(opt);
+  });
+  sectionSelect.value = names.includes(prevValue) ? prevValue : names[0];
+  renderRosterNameList();
+}
+
+let rosterDragFromIndex = null;
+
+// Renders the current section's name list as draggable rows. Names beyond the
+// section's current seat count are visually flagged red (not on the chart yet) --
+// they'll automatically pick up a seat the moment the section grows to fit them.
+function renderRosterNameList(){
+  const section = document.getElementById('rosterSectionSelect').value;
+  const listEl = document.getElementById('rosterNameList');
+  listEl.innerHTML = '';
+  if(!section) return;
+  const names = (chart.rosters && chart.rosters[section]) || [];
+  const seatCount = chart.seats.filter(s=>!s.hidden && s.preset === section).length;
+  if(names.length === 0){
+    listEl.innerHTML = '<div class="empty-hint">No names yet -- paste a list below.</div>';
+    return;
+  }
+  names.forEach((name, i)=>{
+    const row = document.createElement('div');
+    row.className = 'roster-name-row' + (i >= seatCount ? ' unassigned' : '');
+    row.draggable = true;
+    row.dataset.index = i;
+    row.innerHTML = `<span class="drag-handle">⠿</span><span class="roster-name-text"></span><span class="roster-rank-num">${i+1}</span>`;
+    row.querySelector('.roster-name-text').textContent = name || '(empty)';
+    if(!name) row.querySelector('.roster-name-text').style.opacity = '0.5';
+    row.title = i >= seatCount ? 'Not on the chart yet -- add a seat to this section to assign them' : '';
+
+    row.addEventListener('dragstart', ()=>{
+      rosterDragFromIndex = i;
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', ()=>{
+      row.classList.remove('dragging');
+      rosterDragFromIndex = null;
+    });
+    row.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+    row.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      if(rosterDragFromIndex === null || rosterDragFromIndex === i) return;
+      pushHistory();
+      const arr = chart.rosters[section];
+      const [moved] = arr.splice(rosterDragFromIndex, 1);
+      arr.splice(i, 0, moved);
+      renderRosterNameList();
+      render();
+    });
+
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById('rosterSectionSelect').onchange = renderRosterNameList;
+
+document.getElementById('rosterEditListBtn').onclick = ()=>{
+  const section = document.getElementById('rosterSectionSelect').value;
+  const names = (chart.rosters && chart.rosters[section]) || [];
+  document.getElementById('rosterPasteArea').value = names.join('\n');
+  document.getElementById('rosterPasteWrap').style.display = 'block';
+};
+document.getElementById('rosterPasteCancelBtn').onclick = ()=>{
+  document.getElementById('rosterPasteWrap').style.display = 'none';
+};
+document.getElementById('rosterPasteApplyBtn').onclick = ()=>{
+  const section = document.getElementById('rosterSectionSelect').value;
+  if(!section) return;
+  const raw = document.getElementById('rosterPasteArea').value;
+  const names = raw.split('\n').map(n=>n.trim()).filter(n=>n.length > 0);
+  pushHistory();
+  if(!chart.rosters) chart.rosters = {};
+  chart.rosters[section] = names;
+  document.getElementById('rosterPasteWrap').style.display = 'none';
+  renderRosterNameList();
+  render();
+};
+
+document.getElementById('rosterToggleBtn').onclick = ()=>{
+  rosterPanelOpen = !rosterPanelOpen;
+  document.getElementById('rosterPanel').classList.toggle('show', rosterPanelOpen);
+  if(rosterPanelOpen) refreshRosterSectionSelect();
+};
+document.getElementById('rosterPanelCloseBtn').onclick = ()=>{
+  rosterPanelOpen = false;
+  document.getElementById('rosterPanel').classList.remove('show');
+};
 document.getElementById('seatRankInvert').onchange = e=>{ pushHistory(); currentSeatRankSection().invert = e.target.checked; render(); };
 document.getElementById('seatRankHideSection').onchange = e=>{ pushHistory(); currentSeatRankSection().hidden = e.target.checked; render(); };
 document.getElementById('flipChart').onchange = e=>{ pushHistory(); chart.flipped=e.target.checked; render(); };
@@ -4072,6 +4508,7 @@ window.addEventListener('keydown', e=>{
     refreshAutoGroupList();
     refreshCustomGroupList();
     if(chart.showSeatRank) refreshSeatRankSectionSelect();
+    if(rosterPanelOpen) refreshRosterSectionSelect();
   }
 
   if(e.key==='ArrowUp' || e.key==='ArrowDown' || e.key==='ArrowLeft' || e.key==='ArrowRight'){
@@ -4426,10 +4863,12 @@ function syncUIFromChart(){
   document.getElementById('flipChart').checked = !!chart.flipped;
   document.getElementById('showLabels').checked = chart.showLabels !== false;
   document.getElementById('showMusicStand').checked = chart.showMusicStand !== false;
+  document.getElementById('showRosterNames').checked = chart.showRosterNames !== false;
   document.getElementById('showLegend').checked = chart.showLegend !== false;
   document.getElementById('showSeatRank').checked = !!chart.showSeatRank;
   document.getElementById('seatRankOptions').style.display = chart.showSeatRank ? 'block' : 'none';
   if(chart.showSeatRank) refreshSeatRankSectionSelect();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
   document.getElementById('seatSize').value = chart.seatSize || 100;
   document.getElementById('seatSpacing').value = chart.seatSpacing || 100;
   document.getElementById('rowSpacingSlider').value = chart.rowSpacing || 100;
@@ -4473,9 +4912,13 @@ function applyLoadedChartData(data, nameForField){
   if(!Array.isArray(data.groups)) data.groups = [];
   if(!Array.isArray(data.rowSeatSpacingPct)) data.rowSeatSpacingPct = [];
   if(data.showMusicStand === undefined) data.showMusicStand = true;
+  if(data.showRosterNames === undefined) data.showRosterNames = true;
   if(data.showSeatRank === undefined) data.showSeatRank = false;
   if(!data.seatRankSettings || typeof data.seatRankSettings !== 'object' || Array.isArray(data.seatRankSettings)){
     data.seatRankSettings = {};
+  }
+  if(!data.rosters || typeof data.rosters !== 'object' || Array.isArray(data.rosters)){
+    data.rosters = {};
   }
   chart = data;
   selectedId = null;
