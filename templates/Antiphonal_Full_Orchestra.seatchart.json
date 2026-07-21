@@ -3,7 +3,7 @@
   "notes": "",
   "flipped": false,
   "showLabels": true,
-  "showMusicStand": true,
+  "showMusicStand": false,
   "showLegend": false,
   "showSeatRank": false,
   "seatRankSettings": {
