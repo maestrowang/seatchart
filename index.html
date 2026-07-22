@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.7.0</span>
+        v<span id="appVersion">4.9.1</span>
       </div>
     </div>
   </aside>
@@ -1482,12 +1482,32 @@ function podiumPoint(){
 // one seat and sections whose rank badges are currently hidden. This is what roster name
 // assignment uses, since a name should still map to seat position even when rank NUMBERS
 // aren't being displayed. computeSeatRanks() (below) wraps this for the display path.
+// A seat's "section key" is its instrument name when one's assigned. For seats with NO
+// instrument, it's a synthetic per-row key instead -- this lets a chart with no
+// instruments at all still support name rosters, grouped naturally by row rather than
+// by section, since there's no instrument grouping to fall back on.
+function effectiveSectionKey(seat){
+  if(seat.preset) return seat.preset;
+  return '__row_' + seat.row;
+}
+function isRowSectionKey(key){
+  return typeof key === 'string' && key.indexOf('__row_') === 0;
+}
+function sectionDisplayName(key){
+  if(isRowSectionKey(key)){
+    const rowNum = parseInt(key.slice('__row_'.length), 10);
+    return rowNum === -1 ? 'Freeform seats (no instrument)' : `Row ${rowNum + 1} (no instrument)`;
+  }
+  return key;
+}
+
 function computeAllSeatRanks(){
   const ranks = new Map();
   const groups = {};
   chart.seats.forEach(s=>{
-    if(s.hidden || !s.preset) return;
-    (groups[s.preset] = groups[s.preset] || []).push(s);
+    if(s.hidden) return;
+    const key = effectiveSectionKey(s);
+    (groups[key] = groups[key] || []).push(s);
   });
   const cx = canvas.width/2;
 
@@ -1516,14 +1536,21 @@ function computeAllSeatRanks(){
     return rowsOrdered.flat();
   }
 
-  Object.entries(groups).forEach(([presetName, groupSeats])=>{
-    const settings = (chart.seatRankSettings && chart.seatRankSettings[presetName]) || {};
-    const style = settings.style || 'default';
-    const invert = !!settings.invert;
+  Object.entries(groups).forEach(([sectionKey, groupSeats])=>{
     if(groupSeats.length <= 1){
       groupSeats.forEach(s=>ranks.set(s.id, 1));
       return;
     }
+    if(isRowSectionKey(sectionKey)){
+      // Unassigned seats have no instrument-seniority convention to follow -- just rank
+      // naturally left-to-right by seat position within the row.
+      const order = groupSeats.slice().sort((a,b)=>a.x-b.x);
+      order.forEach((s,i)=> ranks.set(s.id, i+1));
+      return;
+    }
+    const settings = (chart.seatRankSettings && chart.seatRankSettings[sectionKey]) || {};
+    const style = settings.style || 'default';
+    const invert = !!settings.invert;
     // A group made up entirely of straight-row seats ranks from the center outward
     // (innermost = rank 1); curved (arc) rows keep the existing outermost-first
     // convention. Seats' EFFECTIVE shape (accounting for the custom straight/curved
@@ -1570,11 +1597,12 @@ function getRosterAssignments(){
   const ranks = computeAllSeatRanks();
   const assignments = new Map();
   chart.seats.forEach(seat=>{
-    if(seat.hidden || !seat.preset) return;
+    if(seat.hidden) return;
     const rank = ranks.get(seat.id);
     if(rank === undefined) return;
-    const names = (chart.rosters && chart.rosters[seat.preset]) || [];
-    const shuffle = chart.rosterShuffle && chart.rosterShuffle[seat.preset];
+    const key = effectiveSectionKey(seat);
+    const names = (chart.rosters && chart.rosters[key]) || [];
+    const shuffle = chart.rosterShuffle && chart.rosterShuffle[key];
     const trueIndex = shuffle ? shuffle[rank - 1] : rank - 1;
     if(trueIndex === undefined) return;
     const name = names[trueIndex];
@@ -1595,7 +1623,16 @@ function wrapNameForDisplay(name){
 // Draws one or more lines of text centered at (x,y) with a translucent, rounded-corner
 // background chip sized to fit -- keeps names legible over the seat's color/icon and
 // the stage floor texture, however long or short the name is.
-function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected){
+// Computes just the box height a text chip would occupy (matches drawTextChip's own
+// sizing exactly), without drawing anything -- used to position other elements (like a
+// demoted seat label) relative to a chip's real height, whether it's 1 or 2 lines tall.
+function textChipHeight(lines, fontPx){
+  const lineHeight = fontPx * 1.18;
+  const padY = fontPx * 0.34;
+  return lines.length * lineHeight + padY * 2 - (lineHeight - fontPx) * 0.4;
+}
+
+function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected, bgColor){
   ctx.font = `600 ${fontPx}px Inter, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1604,9 +1641,14 @@ function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected){
   const maxWidth = Math.max(...widths, 1);
   const padX = fontPx * 0.55, padY = fontPx * 0.34;
   const boxW = maxWidth + padX * 2;
-  const boxH = lines.length * lineHeight + padY * 2 - (lineHeight - fontPx) * 0.4;
+  const boxH = textChipHeight(lines, fontPx);
   const boxX = x - boxW / 2, boxY = y - boxH / 2;
-  ctx.fillStyle = 'rgba(247,243,233,0.85)';
+  // Black & white export/print always reverts to the plain default look, regardless of
+  // the seat's instrument color -- this is deliberate and explicit rather than relying
+  // on the separate grayscale post-processing pass to "happen to" preserve contrast.
+  const forceBW = exportRenderOptions && exportRenderOptions.bw;
+  const effectiveBg = (bgColor && !forceBW) ? bgColor : null;
+  ctx.fillStyle = effectiveBg ? hexWithAlpha(effectiveBg, 0.75) : 'rgba(247,243,233,0.75)';
   ctx.beginPath();
   if(ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, Math.min(6, boxH / 2));
   else ctx.rect(boxX, boxY, boxW, boxH);
@@ -1622,11 +1664,22 @@ function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected){
     ctx.stroke();
     ctx.restore();
   }
-  ctx.fillStyle = textColor || '#242019';
+  const effectiveTextColor = effectiveBg ? textColorForBg(effectiveBg) : (textColor || '#242019');
+  ctx.fillStyle = effectiveTextColor;
   const startY = y - (lines.length - 1) * lineHeight / 2;
   lines.forEach((line, i)=>{
     ctx.fillText(line, x, startY + i * lineHeight);
   });
+}
+
+// Converts a "#rrggbb" hex color to an rgba() string with the given alpha, for chip
+// backgrounds tinted with a seat's instrument color at partial opacity.
+function hexWithAlpha(hex, alpha){
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if(!m) return hex;
+  const num = parseInt(m[1], 16);
+  const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // Reshapes one arc row's curve to a given bulge depth (sagitta) while keeping its first
@@ -3143,8 +3196,8 @@ function render(){
     });
   }
 
-  // --- pass 2: chairs ---
-  chart.seats.forEach(seat=>{
+  // --- pass 2a: chair bodies + rank badges ---
+  seatsInDrawOrder().forEach(seat=>{
     const sr = seatVisualRadius(seat);
     if(seat.hidden){
       ctx.save();
@@ -3193,41 +3246,6 @@ function render(){
       ctx.restore();
     }
 
-    const hasName = chart.showRosterNames !== false && rosterAssignments.has(seat.id);
-    const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
-
-    if(hasName){
-      // The name takes over the seat's primary label position; the instrument label
-      // (if shown) is demoted to a smaller line below, out of the name's way.
-      ctx.save();
-      if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-      const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
-      const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
-      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale, undefined, isSel);
-      ctx.restore();
-
-      if(chart.showLabels && seat.label){
-        ctx.save();
-        if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-        const labelFontPx = Math.max(9, sr*0.26);
-        drawTextChip(ctx, [seat.label], seat.x, seat.y + sr*0.62 + labelFontPx*0.6, labelFontPx);
-        ctx.restore();
-      }
-    } else if(chart.showLabels && seat.label){
-      ctx.save();
-      if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-      const hasIcon = !!INSTRUMENT_ICON_DRAWERS[seat.preset];
-      const overlapsIcon = hasIcon && !INSTRUMENT_LABEL_NO_OVERLAP.has(seat.preset);
-      ctx.fillStyle = overlapsIcon
-        ? textColorForBg(INSTRUMENT_LABEL_REF_COLOR[seat.preset] || seat.color)
-        : '#242019';
-      ctx.font = `600 ${Math.max(10, sr*0.62)}px Inter, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(seat.label, seat.x + off.dx*sr, seat.y + off.dy*sr + 1);
-      ctx.restore();
-    }
-
     if(seatRanks && seatRanks.has(seat.id)){
       ctx.save();
       if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
@@ -3244,6 +3262,64 @@ function render(){
       ctx.fillText(String(seatRanks.get(seat.id)), bx, by + 0.5);
       ctx.restore();
     }
+  });
+
+  // --- pass 2b: ALL instrument labels (both normal-position and demoted-under-name) ---
+  // drawn for every seat before ANY roster chip, so a chip can never end up underneath
+  // a neighboring seat's label.
+  seatsInDrawOrder().forEach(seat=>{
+    if(seat.hidden) return;
+    const sr = seatVisualRadius(seat);
+    const hasName = chart.showRosterNames !== false && rosterAssignments.has(seat.id);
+    const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
+
+    if(hasName){
+      if(chart.showLabels && seat.label){
+        ctx.save();
+        if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
+        const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
+        const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
+        const nameFontPx = Math.max(9, sr*0.34) * rosterScale;
+        const nameChipH = textChipHeight(nameLines, nameFontPx);
+        const nameCenterY = seat.y + off.dy*sr + 1;
+        const nameBottom = nameCenterY + nameChipH/2;
+        const labelFontPx = Math.max(9, sr*0.26);
+        const labelChipH = textChipHeight([seat.label], labelFontPx);
+        const gap = Math.max(2, sr*0.08);
+        const labelCenterY = nameBottom + gap + labelChipH/2;
+        drawTextChip(ctx, [seat.label], seat.x, labelCenterY, labelFontPx, undefined, false, seat.color);
+        ctx.restore();
+      }
+    } else if(chart.showLabels && seat.label){
+      ctx.save();
+      if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
+      const hasIcon = !!INSTRUMENT_ICON_DRAWERS[seat.preset];
+      const overlapsIcon = hasIcon && !INSTRUMENT_LABEL_NO_OVERLAP.has(seat.preset);
+      ctx.fillStyle = overlapsIcon
+        ? textColorForBg(INSTRUMENT_LABEL_REF_COLOR[seat.preset] || seat.color)
+        : '#242019';
+      ctx.font = `600 ${Math.max(10, sr*0.62)}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(seat.label, seat.x + off.dx*sr, seat.y + off.dy*sr + 1);
+      ctx.restore();
+    }
+  });
+
+  // --- pass 2c: ALL roster name chips -- always on top of every label from pass 2b ---
+  seatsInDrawOrder().forEach(seat=>{
+    if(seat.hidden) return;
+    const sr = seatVisualRadius(seat);
+    const hasName = chart.showRosterNames !== false && rosterAssignments.has(seat.id);
+    if(!hasName) return;
+    const isSel = selection.has(seat.id);
+    const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
+    ctx.save();
+    if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
+    const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
+    const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
+    drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale, undefined, isSel, seat.color);
+    ctx.restore();
   });
 
   chart.textBoxes.forEach(tb=>{
@@ -3348,6 +3424,19 @@ function renderLegend(){
 }
 
 // ---------------- SELECTION / INSPECTOR ----------------
+// Returns chart.seats with the most recently selected seat moved to the end, so its
+// visuals (body, label, roster chip) draw last and land on top of anything overlapping
+// it -- persists even after deselecting, until a different seat becomes selected.
+function seatsInDrawOrder(){
+  if(!lastInteractedSeatId) return chart.seats;
+  const idx = chart.seats.findIndex(s=>s.id === lastInteractedSeatId);
+  if(idx === -1) return chart.seats;
+  const arr = chart.seats.slice();
+  const [bumped] = arr.splice(idx, 1);
+  arr.push(bumped);
+  return arr;
+}
+
 function seatAt(x,y){
   for(let i=chart.seats.length-1;i>=0;i--){
     const s = chart.seats[i];
@@ -3425,12 +3514,12 @@ function determineTextEditTarget(seat, logicalY){
 // reverting always exactly restores the original assignment. With preservePartners,
 // seats that are linked as stand partners (adjacent ranks sharing a stand) are shuffled
 // as a single unit so the same two names always end up sharing a stand together.
-function shuffleRosterSection(presetName, preservePartners){
-  const seats = chart.seats.filter(s=>!s.hidden && s.preset === presetName);
+function shuffleRosterSection(sectionKey, preservePartners){
+  const seats = chart.seats.filter(s=>!s.hidden && effectiveSectionKey(s) === sectionKey);
   const ranks = computeAllSeatRanks();
   const rankToSeat = {};
   seats.forEach(s=>{ const r = ranks.get(s.id); if(r) rankToSeat[r] = s; });
-  const names = chart.rosters[presetName] || [];
+  const names = chart.rosters[sectionKey] || [];
   const N = names.length;
   if(N < 2) return;
 
@@ -3476,23 +3565,24 @@ function shuffleRosterSection(presetName, preservePartners){
 
   pushHistory();
   if(!chart.rosterShuffle) chart.rosterShuffle = {};
-  chart.rosterShuffle[presetName] = permutation;
+  chart.rosterShuffle[sectionKey] = permutation;
 }
 
-function revertRosterShuffle(presetName){
+function revertRosterShuffle(sectionKey){
   pushHistory();
-  if(chart.rosterShuffle) delete chart.rosterShuffle[presetName];
+  if(chart.rosterShuffle) delete chart.rosterShuffle[sectionKey];
 }
 
 function applyRosterNameEdit(seat, newValue){
   const ranks = computeAllSeatRanks();
   const rank = ranks.get(seat.id);
-  if(rank === undefined || !seat.preset) return;
+  if(rank === undefined) return;
+  const key = effectiveSectionKey(seat);
   pushHistory();
   if(!chart.rosters) chart.rosters = {};
-  if(!chart.rosters[seat.preset]) chart.rosters[seat.preset] = [];
-  const arr = chart.rosters[seat.preset];
-  const shuffle = chart.rosterShuffle && chart.rosterShuffle[seat.preset];
+  if(!chart.rosters[key]) chart.rosters[key] = [];
+  const arr = chart.rosters[key];
+  const shuffle = chart.rosterShuffle && chart.rosterShuffle[key];
   const trueIndex = shuffle ? shuffle[rank-1] : rank-1;
   while(arr.length <= trueIndex) arr.push('');
   arr[trueIndex] = newValue.trim();
@@ -3660,12 +3750,14 @@ function renumberRows(rowIndexes){
 let podiumSelected = false;
 let rosterPanelOpen = false;
 let selectedTextBoxId = null;
+let lastInteractedSeatId = null;
 let draggingTextBox = null;
 let textBoxDragMoved = false;
 
 function setSelection(ids){
   selection = new Set(ids.filter(id=>getSeat(id)));
   selectedId = selection.size === 1 ? [...selection][0] : null;
+  if(selectedId) lastInteractedSeatId = selectedId;
   podiumSelected = false;
   selectedTextBoxId = null;
   refreshSelectionUI();
@@ -3730,6 +3822,7 @@ function refreshSelectionUI(){
     }
     setSpacingSlidersScope(false);
     setSeatSizeScope(false);
+    setRosterTextSizeScope(false);
     return;
   }
   textBoxPanel.style.display='none';
@@ -3744,6 +3837,7 @@ function refreshSelectionUI(){
     buildPodiumSwatches(chart.podium.color);
     setSpacingSlidersScope(false);
     setSeatSizeScope(false);
+    setRosterTextSizeScope(false);
     return;
   }
   podiumPanel.style.display='none';
@@ -3752,6 +3846,7 @@ function refreshSelectionUI(){
     empty.style.display = 'block'; insp.style.display='none'; batch.style.display='none';
     setSpacingSlidersScope(false);
     setSeatSizeScope(false);
+    setRosterTextSizeScope(false);
     return;
   }
   if(selection.size === 1){
@@ -3759,6 +3854,7 @@ function refreshSelectionUI(){
     empty.style.display='none'; insp.style.display='block'; batch.style.display='none';
     setSpacingSlidersScope(false);
     setSeatSizeScope(true);
+    setRosterTextSizeScope(true);
     const seat = getSeat(selectedId);
     document.getElementById('labelInput').value = seat.label;
     document.getElementById('standCheck').checked = seat.stand;
@@ -3802,6 +3898,7 @@ function refreshSelectionUI(){
   buildBatchSwatches();
   setSpacingSlidersScope(true);
   setSeatSizeScope(true);
+  setRosterTextSizeScope(true);
   const anyIconSelected = [...selection].some(id=>{ const s=getSeat(id); return s && INSTRUMENT_ICON_DRAWERS[s.preset]; });
   const batchRotField = document.getElementById('batchIconRotationField');
   batchRotField.style.display = anyIconSelected ? 'block' : 'none';
@@ -3936,6 +4033,18 @@ function setSeatSizeScope(scoped){
   } else {
     sizeLabel.textContent = 'Seat size';
     sizeSlider.value = chart.seatSize || 100;
+  }
+}
+
+function setRosterTextSizeScope(scoped){
+  const sizeLabel = document.getElementById('rosterTextSizeLabel');
+  const sizeSlider = document.getElementById('rosterTextSize');
+  if(scoped){
+    sizeLabel.textContent = 'Roster text size (selected)';
+    sizeSlider.value = 100;
+  } else {
+    sizeLabel.textContent = 'Roster text size';
+    sizeSlider.value = chart.rosterTextScale || 100;
   }
 }
 
@@ -4717,23 +4826,26 @@ function refreshRosterSectionSelect(){
   const sectionSelect = document.getElementById('rosterSectionSelect');
   const content = document.getElementById('rosterSectionContent');
   const noSections = document.getElementById('rosterNoSections');
-  const names = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
+  const instrumentKeys = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
+  const rowKeys = [...new Set(chart.seats.filter(s=>!s.hidden && !s.preset).map(s=>effectiveSectionKey(s)))]
+    .sort((a,b)=> parseInt(a.slice(6),10) - parseInt(b.slice(6),10));
+  const keys = [...instrumentKeys, ...rowKeys];
   const prevValue = sectionSelect.value;
   sectionSelect.innerHTML = '';
-  if(names.length === 0){
+  if(keys.length === 0){
     content.style.display = 'none';
     noSections.style.display = 'block';
     return;
   }
   noSections.style.display = 'none';
   content.style.display = 'block';
-  names.forEach(name=>{
+  keys.forEach(key=>{
     const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
+    opt.value = key;
+    opt.textContent = sectionDisplayName(key);
     sectionSelect.appendChild(opt);
   });
-  sectionSelect.value = names.includes(prevValue) ? prevValue : names[0];
+  sectionSelect.value = keys.includes(prevValue) ? prevValue : keys[0];
   renderRosterNameList();
 }
 
@@ -4749,7 +4861,7 @@ function renderRosterNameList(){
   updateRosterShuffleButton();
   if(!section) return;
   const names = (chart.rosters && chart.rosters[section]) || [];
-  const seatCount = chart.seats.filter(s=>!s.hidden && s.preset === section).length;
+  const seatCount = chart.seats.filter(s=>!s.hidden && effectiveSectionKey(s) === section).length;
   const isShuffled = !!(chart.rosterShuffle && chart.rosterShuffle[section]);
   if(names.length === 0){
     listEl.innerHTML = '<div class="empty-hint">No names yet -- paste a list below.</div>';
@@ -5457,7 +5569,7 @@ function renderChartToOffscreenCanvas(mode, scale){
 
   const savedCanvas = canvas, savedCtx = ctx;
   canvas = canvasProxy; ctx = offCtx;
-  exportRenderOptions = mode === 'screen' ? null : { whiteBg: true, skipGrid: true };
+  exportRenderOptions = mode === 'screen' ? null : { whiteBg: true, skipGrid: true, bw: mode === 'print-bw' };
   render();
   exportRenderOptions = null;
   canvas = savedCanvas; ctx = savedCtx;
