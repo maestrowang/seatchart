@@ -447,6 +447,26 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     margin:0 0 10px;
     font-weight:600;
   }
+  .section h3.collapsible{
+    cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    user-select:none;
+  }
+  .section h3.collapsible .section-title-text{
+    display:inline-block; transform:translateX(0);
+    transition:color 0.12s ease, transform 0.2s ease;
+  }
+  .section h3.collapsible:hover .section-title-text{
+    color:var(--brass);
+    transform:translateX(4px);
+  }
+  .section h3.collapsible .chev{
+    font-size:9px; transition:transform 0.15s ease, color 0.12s ease; color:var(--ink-soft);
+  }
+  .section h3.collapsible:hover .chev{ color:var(--brass); }
+  .section.collapsed h3.collapsible .chev{ transform:rotate(-90deg); }
+  .section.collapsed .section-content{ display:none; }
+  .collapse-all-row{ display:flex; gap:8px; margin:4px 0 18px; }
+  .collapse-all-row button{ flex:1; font-size:11.5px; padding:6px 8px; }
   label.field{ display:block; margin-bottom:8px; }
   label.field span{
     display:block;
@@ -707,8 +727,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <button id="redoBtn" disabled>↪ Redo</button>
     </div>
 
-    <div class="section">
-      <h3>Build Rows</h3>
+    <div class="section" id="section-build-rows">
+      <h3 class="collapsible"><span class="section-title-text">Build Rows</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-build-rows">
       <label class="field"><span>Chairs in row</span>
         <input type="number" id="rowCount" value="8" min="1" max="40">
       </label>
@@ -724,19 +745,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <button class="block danger" id="resetRowsBtn" style="margin-top:6px;">↺ Reset Seating Chart</button>
     </div>
-
-    <div class="section">
-      <h3>Tools</h3>
-      <div class="btn-row">
-        <button id="addChairTool">+ Freeform Chair</button>
-        <button id="paintTool">🎨 Paint Color</button>
-      </div>
-      <button class="block" id="linkTool" style="margin-top:6px;">🔗 Link Stand Partners</button>
-      <div class="swatches" id="paintSwatches"></div>
     </div>
 
-    <div class="section">
-      <h3>Selection</h3>
+    <div class="section collapsed" id="section-selection">
+      <h3 class="collapsible"><span class="section-title-text">Selection</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-selection">
       <div id="inspectorEmpty" class="empty-hint">Click a chair to edit it, drag on empty stage to box-select several, or drag any chair to reposition.</div>
       <div id="inspector" class="inspector" style="display:none;">
         <h4>Editing seat</h4>
@@ -793,19 +806,67 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         <div class="checkline"><input type="checkbox" id="podiumConductorStandCheck"> <label for="podiumConductorStandCheck">Conductor stand</label></div>
         <button class="block danger" id="podiumDisableBtn">Disable Podium</button>
       </div>
+      <div id="textBoxInspector" class="inspector" style="display:none;">
+        <h4>Editing text box</h4>
+        <label class="field"><span>Text</span>
+          <input type="text" id="textBoxContentInput">
+        </label>
+        <label class="field"><span>Font size</span>
+          <input type="range" id="textBoxFontSize" min="10" max="48" value="16">
+        </label>
+        <div class="btn-row">
+          <button type="button" id="textBoxBoldBtn"><b>B</b></button>
+          <button type="button" id="textBoxItalicBtn"><i>I</i></button>
+          <button type="button" id="textBoxUnderlineBtn"><u>U</u></button>
+        </div>
+        <div class="btn-row" style="margin-top:6px;">
+          <button type="button" id="textBoxAlignLeftBtn">Left</button>
+          <button type="button" id="textBoxAlignCenterBtn">Center</button>
+          <button type="button" id="textBoxAlignRightBtn">Right</button>
+        </div>
+        <button class="block danger" id="textBoxDeleteBtn" style="margin-top:8px;">Delete Text Box</button>
+      </div>
+    </div>
     </div>
 
-    <div class="section">
-      <h3>Groups</h3>
+    <div class="section" id="section-tools">
+      <h3 class="collapsible"><span class="section-title-text">Tools</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-tools">
+      <button class="block" id="addChairTool">+ Freeform Chair</button>
+      <button class="block" id="linkTool" style="margin-top:6px;">🔗 Link Stand Partners</button>
+      <button class="block" id="textBoxTool" style="margin-top:6px;">📝 Text Box</button>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+        <label class="field"><span id="seatSizeLabel">Seat size</span>
+          <input type="range" id="seatSize" min="60" max="140" value="100">
+        </label>
+        <label class="field"><span id="seatSpacingLabel">Seat spacing</span>
+          <input type="range" id="seatSpacing" min="60" max="160" value="100">
+        </label>
+        <label class="field"><span id="rowSpacingLabel">Row spacing</span>
+          <input type="range" id="rowSpacingSlider" min="60" max="160" value="100">
+        </label>
+        <label class="field"><span id="stageSpacingLabel">Stage spacing</span>
+          <input type="range" id="stageSpacingSlider" min="60" max="160" value="100">
+        </label>
+      </div>
+    </div>
+    </div>
+
+
+    <div class="section collapsed" id="section-groups">
+      <h3 class="collapsible"><span class="section-title-text">Groups</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-groups">
       <div id="autoGroupList"></div>
       <div id="customGroupSection" style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:none;">
         <div class="meta-tag" style="display:block; margin-bottom:6px;">CUSTOM GROUPS</div>
         <div id="customGroupList"></div>
       </div>
     </div>
+    </div>
 
-    <div class="section">
-      <h3>View</h3>
+    <div class="section" id="section-view">
+      <h3 class="collapsible"><span class="section-title-text">View</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-view">
       <div class="checkline"><input type="checkbox" id="showSeatRank"> <label for="showSeatRank">Show seat rank numbers</label></div>
       <div id="seatRankOptions" style="display:none; margin-top:6px;">
         <label class="field"><span>Section</span>
@@ -826,29 +887,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <div class="checkline"><input type="checkbox" id="showLabels" checked> <label for="showLabels">Show seat labels</label></div>
       <div class="checkline"><input type="checkbox" id="showRosterNames" checked> <label for="showRosterNames">Show roster names</label></div>
+      <label class="field"><span id="rosterTextSizeLabel">Roster text size</span>
+        <input type="range" id="rosterTextSize" min="60" max="160" value="100">
+      </label>
       <div class="checkline"><input type="checkbox" id="showMusicStand" checked> <label for="showMusicStand">Show music stand</label></div>
       <div class="checkline"><input type="checkbox" id="showLegend" checked> <label for="showLegend">Show section legend</label></div>
       <div class="checkline"><input type="checkbox" id="flipChart"> <label for="flipChart">Flip (performer's view)</label></div>
-      <div style="margin-top:10px; padding-bottom:10px; border-bottom:1px solid var(--line);"></div>
-      <label class="field" style="margin-top:12px;"><span id="seatSizeLabel">Seat size</span>
-        <input type="range" id="seatSize" min="60" max="140" value="100">
-      </label>
-      <label class="field"><span id="seatSpacingLabel">Seat spacing</span>
-        <input type="range" id="seatSpacing" min="60" max="160" value="100">
-      </label>
-      <label class="field"><span id="rowSpacingLabel">Row spacing</span>
-        <input type="range" id="rowSpacingSlider" min="60" max="160" value="100">
-      </label>
-      <label class="field"><span id="stageSpacingLabel">Stage spacing</span>
-        <input type="range" id="stageSpacingSlider" min="60" max="160" value="100">
-      </label>
+      <div style="margin-top:10px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line);"></div>
       <label class="field"><span>Notes (prints below chart)</span>
         <textarea id="notesInput" placeholder="e.g. Concert attire: black &amp; white"></textarea>
       </label>
     </div>
+    </div>
 
-    <div class="section">
-      <h3>Save &amp; Load</h3>
+    <div class="section collapsed" id="section-templates">
+      <h3 class="collapsible"><span class="section-title-text">Templates</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-templates">
+      <div id="templateList"></div>
+      <button class="block" id="refreshTemplatesBtn" style="margin-top:6px;">Refresh List</button>
+    </div>
+    </div>
+
+    <div class="section collapsed" id="section-save-load">
+      <h3 class="collapsible"><span class="section-title-text">Save &amp; Load</span><span class="chev">▾</span></h3>
+<div class="section-content" id="sec-save-load">
       <label class="field"><span>Chart name</span>
         <input type="text" id="chartName" placeholder="Fall Concert - Band">
       </label>
@@ -862,6 +924,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         <input type="file" id="importFileInput" accept=".json,.seatchart" style="display:none;">
       </div>
     </div>
+    </div>
 
     <div class="section">
       <h3>Export</h3>
@@ -872,16 +935,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <button class="block" id="printChartBtn" style="margin-top:6px;">Print Chart</button>
     </div>
 
-    <div class="section">
-      <h3>Templates</h3>
-      <div id="templateList"></div>
-      <button class="block" id="refreshTemplatesBtn" style="margin-top:6px;">Refresh List</button>
+    
+
+    <div class="collapse-all-row">
+      <button type="button" id="collapseAllBtn">Collapse All</button>
+      <button type="button" id="expandAllBtn">Expand All</button>
     </div>
 
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.1.0</span>
+        v<span id="appVersion">4.6.0</span>
       </div>
     </div>
   </aside>
@@ -915,6 +979,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <div class="meta-tag" style="display:block; margin:10px 0 6px;">NAMES (in rank order)</div>
       <div id="rosterNameList"></div>
       <button type="button" class="block" id="rosterEditListBtn" style="margin-top:8px;">Paste / Edit Names</button>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+        <div class="checkline"><input type="checkbox" id="rosterPreservePartners"> <label for="rosterPreservePartners">Preserve stand partners</label></div>
+        <div class="btn-row" style="margin-top:6px;">
+          <button type="button" id="rosterShuffleBtn">🎲 Shuffle</button>
+          <button type="button" id="rosterRevertBtn" style="display:none;">Revert to Original</button>
+        </div>
+        <div class="empty-hint" id="rosterShuffleNote" style="display:none; margin-top:4px;">This section is shuffled -- names can't be reordered by drag until you revert.</div>
+      </div>
       <div id="rosterPasteWrap" style="display:none; margin-top:8px;">
         <textarea id="rosterPasteArea" rows="8" placeholder="Paste names here, one per line" style="width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:13px; padding:6px 8px; border:1px solid var(--line); border-radius:6px;"></textarea>
         <div class="btn-row" style="margin-top:6px;">
@@ -1059,10 +1131,13 @@ let chart = {
   showLabels: true,
   showMusicStand: true,
   showRosterNames: true,
+  rosterTextScale: 100,
   showLegend: true,
   showSeatRank: false,
   seatRankSettings: {}, // { [presetName]: { style: 'default'|'outer', invert: bool, hidden: bool } }
   rosters: {}, // { [presetName]: string[] } -- ordered names, index 0 = rank 1
+  rosterShuffle: {}, // { [presetName]: number[] } -- permutation of indices into rosters[name]; absent = not shuffled
+  textBoxes: [], // [{id, x, y, text, fontSize, bold, italic, underline, align}]
   seatSize: 100,
   seatSpacing: 100, // percentage; scales each arc row's bulge without moving its endpoints
   rowSpacing: 100, // percentage; scales the depth gap between consecutive rows
@@ -1127,7 +1202,6 @@ function updateUndoRedoButtons(){
   document.getElementById('redoBtn').disabled = redoStack.length === 0;
 }
 
-let paintColor = SWATCH_COLORS[0];
 let dragging = null;
 let dragMoved = false;
 let dragOffset = { x: 0, y: 0 };
@@ -1344,7 +1418,12 @@ function newSeat(x,y,row){
 // introducing seat overlap.
 // The full lowering amount at 100% ("split the difference, plus one more seat-width")
 // scaled by a percentage. 100% reproduces the original lowered position exactly.
-function anchorYForStageSpacing(percent){
+// The raw, original mapping from a stage-spacing percent to an anchor Y position.
+// Kept as-is and reused below with a remapped input so p=100 always lands on the
+// exact same anchor it always has (existing saved charts don't shift), while the
+// overall slider direction is inverted: right now means "up/away", matching row
+// spacing's convention, instead of the previous "right means closer/down".
+function rawAnchorYForStageSpacing(percent){
   const p = percent || 100;
   const priorY = canvas.height - 40;
   const bottom = canvas.height;
@@ -1361,6 +1440,19 @@ function anchorYForStageSpacing(percent){
   // enforced downstream (per affected row's own depth), not by an arbitrary cap here.
   const fullOffset = defaultY - priorY;
   return priorY + fullOffset*(p/100);
+}
+
+function anchorYForStageSpacing(percent){
+  const p = percent || 100;
+  let remapped;
+  if(p >= 100){
+    const t = (p - 100) / 60; // 0 at p=100, 1 at p=160
+    remapped = 100 - t*40; // reproduces the old 60->100 range, reversed
+  } else {
+    const t = (100 - p) / 40; // 0 at p=100, 1 at p=60
+    remapped = 100 + t*60; // reproduces the old 100->160 range, reversed
+  }
+  return rawAnchorYForStageSpacing(remapped);
 }
 
 function podiumAnchorY(){
@@ -1482,8 +1574,11 @@ function getRosterAssignments(){
     const rank = ranks.get(seat.id);
     if(rank === undefined) return;
     const names = (chart.rosters && chart.rosters[seat.preset]) || [];
-    const name = names[rank - 1];
-    if(rank - 1 < names.length && name) assignments.set(seat.id, name);
+    const shuffle = chart.rosterShuffle && chart.rosterShuffle[seat.preset];
+    const trueIndex = shuffle ? shuffle[rank - 1] : rank - 1;
+    if(trueIndex === undefined) return;
+    const name = names[trueIndex];
+    if(trueIndex < names.length && name) assignments.set(seat.id, name);
   });
   return assignments;
 }
@@ -2948,6 +3043,9 @@ function resetRowsToDefault(){
   chart.showSeatRank = false;
   chart.seatRankSettings = {};
   chart.rosters = {};
+  chart.rosterShuffle = {};
+  chart.textBoxes = [];
+  selectedTextBoxId = null;
   chart.podium = { enabled: false, x: null, y: null, label: 'Podium', color: '#3A362B', standType: null };
   chart.title = 'Untitled Seating Chart';
   chart.notes = '';
@@ -3093,17 +3191,15 @@ function render(){
       ctx.save();
       if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
       const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
-      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34));
+      const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
+      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale);
       ctx.restore();
 
       if(chart.showLabels && seat.label){
         ctx.save();
         if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-        ctx.fillStyle = '#5A5548';
-        ctx.font = `600 ${Math.max(9, sr*0.26)}px Inter, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(seat.label, seat.x, seat.y + sr*0.62);
+        const labelFontPx = Math.max(9, sr*0.26);
+        drawTextChip(ctx, [seat.label], seat.x, seat.y + sr*0.62 + labelFontPx*0.6, labelFontPx);
         ctx.restore();
       }
     } else if(chart.showLabels && seat.label){
@@ -3137,6 +3233,38 @@ function render(){
       ctx.fillText(String(seatRanks.get(seat.id)), bx, by + 0.5);
       ctx.restore();
     }
+  });
+
+  chart.textBoxes.forEach(tb=>{
+    ctx.save();
+    if(chart.flipped){ ctx.translate(tb.x, tb.y); ctx.scale(-1,-1); ctx.translate(-tb.x,-tb.y); }
+    const { fontStyle, width } = textBoxMetrics(tb);
+    ctx.font = fontStyle;
+    ctx.textAlign = tb.align || 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#242019';
+    ctx.fillText(tb.text || '', tb.x, tb.y + 1);
+    if(tb.underline){
+      let ux;
+      if(tb.align === 'left') ux = tb.x;
+      else if(tb.align === 'right') ux = tb.x - width;
+      else ux = tb.x - width/2;
+      ctx.beginPath();
+      ctx.moveTo(ux, tb.y + tb.fontSize*0.42);
+      ctx.lineTo(ux + width, tb.y + tb.fontSize*0.42);
+      ctx.strokeStyle = '#242019';
+      ctx.lineWidth = Math.max(1, tb.fontSize*0.06);
+      ctx.stroke();
+    }
+    if(selectedTextBoxId === tb.id){
+      const rect = textBoxRect(tb);
+      ctx.strokeStyle = '#B8842A';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4,3]);
+      ctx.strokeRect(rect.left-4, rect.top-4, rect.width+8, rect.height+8);
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
   });
   ctx.restore();
 
@@ -3218,6 +3346,47 @@ function seatAt(x,y){
   return null;
 }
 
+function getTextBox(id){ return chart.textBoxes.find(t=>t.id===id); }
+
+// Computes a text box's font string and its rendered pixel width/height, used for both
+// hit-testing and drawing (kept as a single source of truth so they never drift apart).
+function textBoxMetrics(tb){
+  const weight = tb.bold ? '700' : '400';
+  const styleWord = tb.italic ? 'italic' : 'normal';
+  const fontStyle = `${styleWord} ${weight} ${tb.fontSize}px Inter, sans-serif`;
+  ctx.font = fontStyle;
+  const width = Math.max(10, ctx.measureText(tb.text || 'Text').width);
+  const height = tb.fontSize * 1.3;
+  return { width, height, fontStyle };
+}
+
+// Returns a text box's bounding rect in LOGICAL (unflipped) coordinates, anchored at
+// (tb.x, tb.y) according to its alignment -- left/center/right all anchor at the same
+// point conceptually, but the box extends in different directions from it.
+function textBoxRect(tb){
+  const { width, height } = textBoxMetrics(tb);
+  let left;
+  if(tb.align === 'left') left = tb.x;
+  else if(tb.align === 'right') left = tb.x - width;
+  else left = tb.x - width/2;
+  return { left, top: tb.y - height/2, width, height };
+}
+
+function textBoxAt(x, y){
+  for(let i = chart.textBoxes.length - 1; i >= 0; i--){
+    const tb = chart.textBoxes[i];
+    const rect = textBoxRect(tb);
+    const screenTopLeft = flipPoint(rect.left, rect.top);
+    const screenBottomRight = flipPoint(rect.left + rect.width, rect.top + rect.height);
+    const minX = Math.min(screenTopLeft.x, screenBottomRight.x) - 4;
+    const maxX = Math.max(screenTopLeft.x, screenBottomRight.x) + 4;
+    const minY = Math.min(screenTopLeft.y, screenBottomRight.y) - 4;
+    const maxY = Math.max(screenTopLeft.y, screenBottomRight.y) + 4;
+    if(x >= minX && x <= maxX && y >= minY && y <= maxY) return tb;
+  }
+  return null;
+}
+
 function getSeat(id){ return chart.seats.find(s=>s.id===id); }
 
 // Decides which piece of text on a seat a click landed on: the roster name (if one's
@@ -3240,6 +3409,70 @@ function determineTextEditTarget(seat, logicalY){
 // Writes an edited roster name back into chart.rosters at this seat's rank position,
 // padding any skipped ranks with empty placeholders (treated as "no name" everywhere
 // else), then trims trailing empty placeholders so the array doesn't grow unnecessarily.
+// Randomly reassigns which name goes to which rank within a section, WITHOUT touching
+// the true underlying order in chart.rosters -- it only records a permutation, so
+// reverting always exactly restores the original assignment. With preservePartners,
+// seats that are linked as stand partners (adjacent ranks sharing a stand) are shuffled
+// as a single unit so the same two names always end up sharing a stand together.
+function shuffleRosterSection(presetName, preservePartners){
+  const seats = chart.seats.filter(s=>!s.hidden && s.preset === presetName);
+  const ranks = computeAllSeatRanks();
+  const rankToSeat = {};
+  seats.forEach(s=>{ const r = ranks.get(s.id); if(r) rankToSeat[r] = s; });
+  const names = chart.rosters[presetName] || [];
+  const N = names.length;
+  if(N < 2) return;
+
+  // Position groups reflect the actual physical stand structure -- which index-slots
+  // are permanently paired at a shared stand. Content blocks are the same grouping
+  // applied to the (currently identity-ordered) names.
+  const positionGroups = [];
+  let i = 0;
+  while(i < N){
+    const seat = rankToSeat[i+1];
+    const nextSeat = rankToSeat[i+2];
+    if(preservePartners && seat && nextSeat && seat.standPartner === nextSeat.id){
+      positionGroups.push([i, i+1]);
+      i += 2;
+    } else {
+      positionGroups.push([i]);
+      i += 1;
+    }
+  }
+  const contentBlocks = positionGroups.map(g => g.slice());
+
+  // Shuffle content blocks only among OTHER groups of the same size, so a pair only
+  // ever lands on an actual stand position (never split across two solo slots, or
+  // merged into a differently-shaped structure).
+  const bySize = {};
+  positionGroups.forEach((g, idx)=>{
+    (bySize[g.length] = bySize[g.length] || []).push(idx);
+  });
+
+  const permutation = new Array(N);
+  Object.values(bySize).forEach(groupIndices=>{
+    const shuffledContentIndices = groupIndices.slice();
+    for(let k = shuffledContentIndices.length - 1; k > 0; k--){
+      const j = Math.floor(Math.random() * (k + 1));
+      [shuffledContentIndices[k], shuffledContentIndices[j]] = [shuffledContentIndices[j], shuffledContentIndices[k]];
+    }
+    groupIndices.forEach((posGroupIdx, k)=>{
+      const positions = positionGroups[posGroupIdx];
+      const content = contentBlocks[shuffledContentIndices[k]];
+      positions.forEach((pos, m)=>{ permutation[pos] = content[m]; });
+    });
+  });
+
+  pushHistory();
+  if(!chart.rosterShuffle) chart.rosterShuffle = {};
+  chart.rosterShuffle[presetName] = permutation;
+}
+
+function revertRosterShuffle(presetName){
+  pushHistory();
+  if(chart.rosterShuffle) delete chart.rosterShuffle[presetName];
+}
+
 function applyRosterNameEdit(seat, newValue){
   const ranks = computeAllSeatRanks();
   const rank = ranks.get(seat.id);
@@ -3248,8 +3481,10 @@ function applyRosterNameEdit(seat, newValue){
   if(!chart.rosters) chart.rosters = {};
   if(!chart.rosters[seat.preset]) chart.rosters[seat.preset] = [];
   const arr = chart.rosters[seat.preset];
-  while(arr.length < rank) arr.push('');
-  arr[rank-1] = newValue.trim();
+  const shuffle = chart.rosterShuffle && chart.rosterShuffle[seat.preset];
+  const trueIndex = shuffle ? shuffle[rank-1] : rank-1;
+  while(arr.length <= trueIndex) arr.push('');
+  arr[trueIndex] = newValue.trim();
   while(arr.length > 0 && arr[arr.length-1] === '') arr.pop();
   if(rosterPanelOpen) renderRosterNameList();
 }
@@ -3337,6 +3572,62 @@ function startInlineTextEdit(seat, target){
   input.addEventListener('blur', commit);
 }
 
+// Same inline-editing pattern as seat text, but for a free text box -- positioned over
+// its current text, honoring its own alignment, committing back to tb.text on Enter/blur.
+function startInlineTextBoxEdit(tb){
+  const existing = document.querySelector('.inline-seat-editor');
+  if(existing) existing.remove();
+
+  const rect0 = textBoxRect(tb);
+  const anchorX = tb.align === 'left' ? rect0.left : tb.align === 'right' ? rect0.left + rect0.width : tb.x;
+  const screenLocal = flipPoint(anchorX, tb.y);
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width, scaleY = rect.height / canvas.height;
+  const pageX = rect.left + screenLocal.x * scaleX;
+  const pageY = rect.top + screenLocal.y * scaleY;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = tb.text || '';
+  input.className = 'inline-seat-editor';
+  input.style.left = pageX + 'px';
+  input.style.top = pageY + 'px';
+  input.style.width = Math.max(100, tb.fontSize * scaleY * 8) + 'px';
+  input.style.fontSize = Math.max(11, tb.fontSize * scaleY) + 'px';
+  if(tb.align !== 'center') input.style.transform = tb.align === 'left' ? 'translate(0,-50%)' : 'translate(-100%,-50%)';
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+
+  let settled = false;
+  function commit(){
+    if(settled) return;
+    settled = true;
+    pushHistory();
+    tb.text = input.value;
+    if(selectedTextBoxId === tb.id) refreshSelectionUI();
+    cleanup();
+    render();
+  }
+  function cancel(){
+    if(settled) return;
+    settled = true;
+    cleanup();
+  }
+  function cleanup(){
+    input.removeEventListener('keydown', onKeydown);
+    input.removeEventListener('blur', commit);
+    input.remove();
+  }
+  function onKeydown(e){
+    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
+    else if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
+    e.stopPropagation();
+  }
+  input.addEventListener('keydown', onKeydown);
+  input.addEventListener('blur', commit);
+}
+
 // Renumbers visible seats within a row that still use a plain sequential number as
 // their label (e.g. "3"), so hiding/showing/deleting a numbered seat keeps the rest
 // counting up with no gaps. Custom labels (instrument abbreviations, etc.) are left alone.
@@ -3357,11 +3648,15 @@ function renumberRows(rowIndexes){
 
 let podiumSelected = false;
 let rosterPanelOpen = false;
+let selectedTextBoxId = null;
+let draggingTextBox = null;
+let textBoxDragMoved = false;
 
 function setSelection(ids){
   selection = new Set(ids.filter(id=>getSeat(id)));
   selectedId = selection.size === 1 ? [...selection][0] : null;
   podiumSelected = false;
+  selectedTextBoxId = null;
   refreshSelectionUI();
   render();
 }
@@ -3379,8 +3674,25 @@ function selectPodium(){
   selection = new Set();
   selectedId = null;
   podiumSelected = true;
+  selectedTextBoxId = null;
   refreshSelectionUI();
   render();
+}
+function selectTextBox(tb){
+  selection = new Set();
+  selectedId = null;
+  podiumSelected = false;
+  selectedTextBoxId = tb ? tb.id : null;
+  refreshSelectionUI();
+  render();
+}
+
+// Expands a section if it's currently collapsed -- used to auto-reveal Selection/Groups
+// the moment they have something meaningful to show, without ever auto-collapsing them
+// back (that stays a manual, deliberate action).
+function autoExpandSection(sectionId){
+  const section = document.getElementById(sectionId);
+  if(section) section.classList.remove('collapsed');
 }
 
 function refreshSelectionUI(){
@@ -3388,8 +3700,31 @@ function refreshSelectionUI(){
   const insp = document.getElementById('inspector');
   const batch = document.getElementById('batchInspector');
   const podiumPanel = document.getElementById('podiumInspector');
+  const textBoxPanel = document.getElementById('textBoxInspector');
+
+  if(selectedTextBoxId){
+    autoExpandSection('section-selection');
+    empty.style.display='none'; insp.style.display='none'; batch.style.display='none'; podiumPanel.style.display='none';
+    textBoxPanel.style.display='block';
+    const tb = getTextBox(selectedTextBoxId);
+    if(tb){
+      document.getElementById('textBoxContentInput').value = tb.text;
+      document.getElementById('textBoxFontSize').value = tb.fontSize;
+      document.getElementById('textBoxBoldBtn').classList.toggle('toggled', !!tb.bold);
+      document.getElementById('textBoxItalicBtn').classList.toggle('toggled', !!tb.italic);
+      document.getElementById('textBoxUnderlineBtn').classList.toggle('toggled', !!tb.underline);
+      document.getElementById('textBoxAlignLeftBtn').classList.toggle('toggled', tb.align==='left');
+      document.getElementById('textBoxAlignCenterBtn').classList.toggle('toggled', !tb.align || tb.align==='center');
+      document.getElementById('textBoxAlignRightBtn').classList.toggle('toggled', tb.align==='right');
+    }
+    setSpacingSlidersScope(false);
+    setSeatSizeScope(false);
+    return;
+  }
+  textBoxPanel.style.display='none';
 
   if(podiumSelected){
+    autoExpandSection('section-selection');
     empty.style.display='none'; insp.style.display='none'; batch.style.display='none';
     podiumPanel.style.display='block';
     document.getElementById('podiumLabelInput').value = chart.podium.label || 'Podium';
@@ -3409,6 +3744,7 @@ function refreshSelectionUI(){
     return;
   }
   if(selection.size === 1){
+    autoExpandSection('section-selection');
     empty.style.display='none'; insp.style.display='block'; batch.style.display='none';
     setSpacingSlidersScope(false);
     setSeatSizeScope(true);
@@ -3441,6 +3777,7 @@ function refreshSelectionUI(){
     return;
   }
   // multi-select
+  autoExpandSection('section-selection');
   empty.style.display='none'; insp.style.display='none'; batch.style.display='block';
   document.getElementById('batchCount').textContent = selection.size;
   const allHaveStand = [...selection].every(id=>{ const s=getSeat(id); return s && s.stand; });
@@ -3644,18 +3981,6 @@ function buildPodiumSwatches(activeColor){
   });
 }
 
-function buildPaintSwatches(){
-  const wrap = document.getElementById('paintSwatches');
-  wrap.innerHTML = '';
-  SWATCH_COLORS.forEach(c=>{
-    const d = document.createElement('div');
-    d.className = 'swatch' + (c===paintColor?' active':'');
-    d.style.background = c;
-    d.onclick = ()=>{ paintColor = c; buildPaintSwatches(); };
-    wrap.appendChild(d);
-  });
-}
-
 
 // ---------------- CANVAS INTERACTION ----------------
 canvas.addEventListener('mousedown', e=>{
@@ -3672,8 +3997,16 @@ canvas.addEventListener('mousedown', e=>{
     selectSeat(s);
     return;
   }
-  if(mode === 'paint'){
-    if(seat){ pushHistory(); seat.color = paintColor; render(); }
+  if(mode === 'textbox'){
+    pushHistory();
+    const logical = flipPoint(x, y);
+    const tb = { id: uid(), x: logical.x, y: logical.y, text: 'Text', fontSize: 16, bold: false, italic: false, underline: false, align: 'center' };
+    chart.textBoxes.push(tb);
+    selectTextBox(tb);
+    mode = null;
+    updateModeUI(document.getElementById('textBoxTool'));
+    render();
+    startInlineTextBoxEdit(tb);
     return;
   }
   if(mode === 'link'){
@@ -3759,6 +4092,15 @@ canvas.addEventListener('mousedown', e=>{
     return;
   }
 
+  const tb = textBoxAt(x,y);
+  if(tb){
+    selectTextBox(tb);
+    draggingTextBox = tb; textBoxDragMoved = false;
+    const screen0 = flipPoint(tb.x, tb.y);
+    dragOffset = { x: x - screen0.x, y: y - screen0.y };
+    return;
+  }
+
   // clicked empty stage: begin a rubber-band selection
   selecting = true;
   selectAdditive = e.shiftKey;
@@ -3770,6 +4112,13 @@ canvas.addEventListener('dblclick', e=>{
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX-rect.left) * (canvas.width/rect.width);
   const y = (e.clientY-rect.top) * (canvas.height/rect.height);
+  const tb = textBoxAt(x, y);
+  if(tb){
+    e.preventDefault();
+    selectTextBox(tb);
+    startInlineTextBoxEdit(tb);
+    return;
+  }
   const seat = seatAt(x, y);
   if(!seat || seat.hidden) return;
   const logical = flipPoint(x, y); // flipPoint is its own inverse -- converts click to logical space
@@ -3812,6 +4161,16 @@ canvas.addEventListener('mousemove', e=>{
       const s = getSeat(id); const start = groupDragStartPositions[id];
       if(s && start){ s.x = start.x + dx; s.y = start.y + dy; s.manuallyMoved = true; }
     });
+    render();
+    return;
+  }
+  if(draggingTextBox){
+    if(!textBoxDragMoved){ pushHistory(); }
+    textBoxDragMoved = true;
+    const screenX = x - dragOffset.x;
+    const screenY = y - dragOffset.y;
+    const logical = flipPoint(screenX, screenY);
+    draggingTextBox.x = logical.x; draggingTextBox.y = logical.y;
     render();
     return;
   }
@@ -3879,14 +4238,11 @@ window.addEventListener('mouseup', ()=>{
   groupDragging = false; groupDragMoved = false; groupDragStartPositions = null; groupDragMouseStart = null;
   draggingStandKey = null; standDragMoved = false;
   draggingPodium = false; podiumDragMoved = false;
+  draggingTextBox = null; textBoxDragMoved = false;
 });
 
 document.getElementById('addChairTool').onclick = (e)=>{
   mode = mode==='add' ? null : 'add';
-  updateModeUI(e.target);
-};
-document.getElementById('paintTool').onclick = (e)=>{
-  mode = mode==='paint' ? null : 'paint';
   updateModeUI(e.target);
 };
 document.getElementById('linkTool').onclick = (e)=>{
@@ -3894,15 +4250,19 @@ document.getElementById('linkTool').onclick = (e)=>{
   linkFirst = null;
   updateModeUI(e.target);
 };
+document.getElementById('textBoxTool').onclick = (e)=>{
+  mode = mode==='textbox' ? null : 'textbox';
+  updateModeUI(e.target);
+};
 function updateModeUI(btn){
   document.getElementById('addChairTool').classList.remove('toggled');
-  document.getElementById('paintTool').classList.remove('toggled');
   document.getElementById('linkTool').classList.remove('toggled');
-  canvas.classList.remove('adding','painting','linking');
+  document.getElementById('textBoxTool').classList.remove('toggled');
+  canvas.classList.remove('adding','linking');
   canvas.style.cursor = '';
   if(mode==='add'){ btn.classList.add('toggled'); canvas.classList.add('adding'); toast('Click the stage to drop a new chair'); }
-  if(mode==='paint'){ btn.classList.add('toggled'); canvas.classList.add('painting'); toast('Click chairs to paint them'); }
   if(mode==='link'){ btn.classList.add('toggled'); canvas.classList.add('linking'); toast('Click two seats to share a stand between them'); }
+  if(mode==='textbox'){ btn.classList.add('toggled'); toast('Click the stage to place a text box'); }
 }
 
 // Clicking anywhere outside the seating chart itself (the surrounding margins, the
@@ -3914,9 +4274,9 @@ document.addEventListener('click', (e)=>{
   const target = e.target;
   if(target === canvas || canvas.contains(target)) return;
   const addBtn = document.getElementById('addChairTool');
-  const paintBtn = document.getElementById('paintTool');
   const linkBtn = document.getElementById('linkTool');
-  if(target === addBtn || target === paintBtn || target === linkBtn) return;
+  const textBoxBtn = document.getElementById('textBoxTool');
+  if(target === addBtn || target === linkBtn || target === textBoxBtn) return;
   mode = null;
   linkFirst = null;
   updateModeUI(addBtn);
@@ -4226,6 +4586,53 @@ document.getElementById('podiumDisableBtn').onclick = ()=>{
   render();
 };
 
+document.getElementById('textBoxContentInput').oninput = e=>{
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  tb.text = e.target.value; render();
+};
+document.getElementById('textBoxFontSize').addEventListener('mousedown', ()=>pushHistory());
+document.getElementById('textBoxFontSize').oninput = e=>{
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  tb.fontSize = parseInt(e.target.value); render();
+};
+document.getElementById('textBoxBoldBtn').onclick = ()=>{
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  pushHistory(); tb.bold = !tb.bold;
+  document.getElementById('textBoxBoldBtn').classList.toggle('toggled', tb.bold);
+  render();
+};
+document.getElementById('textBoxItalicBtn').onclick = ()=>{
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  pushHistory(); tb.italic = !tb.italic;
+  document.getElementById('textBoxItalicBtn').classList.toggle('toggled', tb.italic);
+  render();
+};
+document.getElementById('textBoxUnderlineBtn').onclick = ()=>{
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  pushHistory(); tb.underline = !tb.underline;
+  document.getElementById('textBoxUnderlineBtn').classList.toggle('toggled', tb.underline);
+  render();
+};
+function setTextBoxAlign(align){
+  const tb = getTextBox(selectedTextBoxId); if(!tb) return;
+  pushHistory(); tb.align = align;
+  document.getElementById('textBoxAlignLeftBtn').classList.toggle('toggled', align==='left');
+  document.getElementById('textBoxAlignCenterBtn').classList.toggle('toggled', align==='center');
+  document.getElementById('textBoxAlignRightBtn').classList.toggle('toggled', align==='right');
+  render();
+}
+document.getElementById('textBoxAlignLeftBtn').onclick = ()=>setTextBoxAlign('left');
+document.getElementById('textBoxAlignCenterBtn').onclick = ()=>setTextBoxAlign('center');
+document.getElementById('textBoxAlignRightBtn').onclick = ()=>setTextBoxAlign('right');
+document.getElementById('textBoxDeleteBtn').onclick = ()=>{
+  if(!selectedTextBoxId) return;
+  pushHistory();
+  chart.textBoxes = chart.textBoxes.filter(t=>t.id!==selectedTextBoxId);
+  selectedTextBoxId = null;
+  refreshSelectionUI();
+  render();
+};
+
 document.getElementById('showLabels').onchange = e=>{ pushHistory(); chart.showLabels=e.target.checked; render(); };
 document.getElementById('showMusicStand').onchange = e=>{ pushHistory(); chart.showMusicStand=e.target.checked; render(); };
 document.getElementById('showRosterNames').onchange = e=>{ pushHistory(); chart.showRosterNames=e.target.checked; render(); };
@@ -4328,9 +4735,11 @@ function renderRosterNameList(){
   const section = document.getElementById('rosterSectionSelect').value;
   const listEl = document.getElementById('rosterNameList');
   listEl.innerHTML = '';
+  updateRosterShuffleButton();
   if(!section) return;
   const names = (chart.rosters && chart.rosters[section]) || [];
   const seatCount = chart.seats.filter(s=>!s.hidden && s.preset === section).length;
+  const isShuffled = !!(chart.rosterShuffle && chart.rosterShuffle[section]);
   if(names.length === 0){
     listEl.innerHTML = '<div class="empty-hint">No names yet -- paste a list below.</div>';
     return;
@@ -4338,32 +4747,35 @@ function renderRosterNameList(){
   names.forEach((name, i)=>{
     const row = document.createElement('div');
     row.className = 'roster-name-row' + (i >= seatCount ? ' unassigned' : '');
-    row.draggable = true;
+    row.draggable = !isShuffled;
+    if(isShuffled) row.style.cursor = 'default';
     row.dataset.index = i;
     row.innerHTML = `<span class="drag-handle">⠿</span><span class="roster-name-text"></span><span class="roster-rank-num">${i+1}</span>`;
     row.querySelector('.roster-name-text').textContent = name || '(empty)';
     if(!name) row.querySelector('.roster-name-text').style.opacity = '0.5';
     row.title = i >= seatCount ? 'Not on the chart yet -- add a seat to this section to assign them' : '';
 
-    row.addEventListener('dragstart', ()=>{
-      rosterDragFromIndex = i;
-      row.classList.add('dragging');
-    });
-    row.addEventListener('dragend', ()=>{
-      row.classList.remove('dragging');
-      rosterDragFromIndex = null;
-    });
-    row.addEventListener('dragover', (e)=>{ e.preventDefault(); });
-    row.addEventListener('drop', (e)=>{
-      e.preventDefault();
-      if(rosterDragFromIndex === null || rosterDragFromIndex === i) return;
-      pushHistory();
-      const arr = chart.rosters[section];
-      const [moved] = arr.splice(rosterDragFromIndex, 1);
-      arr.splice(i, 0, moved);
-      renderRosterNameList();
-      render();
-    });
+    if(!isShuffled){
+      row.addEventListener('dragstart', ()=>{
+        rosterDragFromIndex = i;
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', ()=>{
+        row.classList.remove('dragging');
+        rosterDragFromIndex = null;
+      });
+      row.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+      row.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        if(rosterDragFromIndex === null || rosterDragFromIndex === i) return;
+        pushHistory();
+        const arr = chart.rosters[section];
+        const [moved] = arr.splice(rosterDragFromIndex, 1);
+        arr.splice(i, 0, moved);
+        renderRosterNameList();
+        render();
+      });
+    }
 
     listEl.appendChild(row);
   });
@@ -4376,6 +4788,30 @@ document.getElementById('rosterEditListBtn').onclick = ()=>{
   const names = (chart.rosters && chart.rosters[section]) || [];
   document.getElementById('rosterPasteArea').value = names.join('\n');
   document.getElementById('rosterPasteWrap').style.display = 'block';
+};
+
+function updateRosterShuffleButton(){
+  const section = document.getElementById('rosterSectionSelect').value;
+  const revertBtn = document.getElementById('rosterRevertBtn');
+  const note = document.getElementById('rosterShuffleNote');
+  const isShuffled = !!(section && chart.rosterShuffle && chart.rosterShuffle[section]);
+  revertBtn.style.display = isShuffled ? 'block' : 'none';
+  note.style.display = isShuffled ? 'block' : 'none';
+}
+
+document.getElementById('rosterShuffleBtn').onclick = ()=>{
+  const section = document.getElementById('rosterSectionSelect').value;
+  if(!section) return;
+  shuffleRosterSection(section, document.getElementById('rosterPreservePartners').checked);
+  renderRosterNameList();
+  render();
+};
+document.getElementById('rosterRevertBtn').onclick = ()=>{
+  const section = document.getElementById('rosterSectionSelect').value;
+  if(!section) return;
+  revertRosterShuffle(section);
+  renderRosterNameList();
+  render();
 };
 document.getElementById('rosterPasteCancelBtn').onclick = ()=>{
   document.getElementById('rosterPasteWrap').style.display = 'none';
@@ -4413,6 +4849,16 @@ document.getElementById('seatSize').oninput = e=>{
     selection.forEach(id=>{ const s = getSeat(id); if(s) s.sizeScale = scale; });
   } else {
     chart.seatSize = val;
+  }
+  render();
+};
+document.getElementById('rosterTextSize').addEventListener('mousedown', ()=>pushHistory());
+document.getElementById('rosterTextSize').oninput = e=>{
+  const val = parseInt(e.target.value);
+  if(selection.size > 0){
+    selection.forEach(id=>{ const s = getSeat(id); if(s) s.rosterTextScale = val; });
+  } else {
+    chart.rosterTextScale = val;
   }
   render();
 };
@@ -4485,6 +4931,15 @@ window.addEventListener('keydown', e=>{
     clearSelection();
     return;
   }
+  if((e.key === 'Delete' || e.key === 'Backspace') && selectedTextBoxId){
+    e.preventDefault();
+    pushHistory();
+    chart.textBoxes = chart.textBoxes.filter(t=>t.id!==selectedTextBoxId);
+    selectedTextBoxId = null;
+    refreshSelectionUI();
+    render();
+    return;
+  }
   if((e.key === 'Delete' || e.key === 'Backspace') && selection.size > 0){
     e.preventDefault();
     pushHistory();
@@ -4543,8 +4998,6 @@ window.addEventListener('keyup', e=>{
 
 
 
-buildPaintSwatches();
-
 // ---------------- SAVE / LOAD ----------------
 async function refreshSavedList(){
   const listEl = document.getElementById('savedList');
@@ -4591,6 +5044,7 @@ function refreshAutoGroupList(){
     listEl.innerHTML = '<div class="empty-hint">No instruments assigned yet.</div>';
     return;
   }
+  autoExpandSection('section-groups');
   if(names.length === 1){
     listEl.innerHTML = '';
     const name = names[0];
@@ -4634,6 +5088,7 @@ function refreshCustomGroupList(){
     listEl.innerHTML = '';
     return;
   }
+  autoExpandSection('section-groups');
   if(chart.groups.length === 1){
     listEl.innerHTML = '';
     const g = chart.groups[0];
@@ -4863,6 +5318,7 @@ function syncUIFromChart(){
   document.getElementById('showLabels').checked = chart.showLabels !== false;
   document.getElementById('showMusicStand').checked = chart.showMusicStand !== false;
   document.getElementById('showRosterNames').checked = chart.showRosterNames !== false;
+  document.getElementById('rosterTextSize').value = chart.rosterTextScale || 100;
   document.getElementById('showLegend').checked = chart.showLegend !== false;
   document.getElementById('showSeatRank').checked = !!chart.showSeatRank;
   document.getElementById('seatRankOptions').style.display = chart.showSeatRank ? 'block' : 'none';
@@ -4912,6 +5368,7 @@ function applyLoadedChartData(data, nameForField){
   if(!Array.isArray(data.rowSeatSpacingPct)) data.rowSeatSpacingPct = [];
   if(data.showMusicStand === undefined) data.showMusicStand = true;
   if(data.showRosterNames === undefined) data.showRosterNames = true;
+  if(data.rosterTextScale === undefined) data.rosterTextScale = 100;
   if(data.showSeatRank === undefined) data.showSeatRank = false;
   if(!data.seatRankSettings || typeof data.seatRankSettings !== 'object' || Array.isArray(data.seatRankSettings)){
     data.seatRankSettings = {};
@@ -4919,7 +5376,12 @@ function applyLoadedChartData(data, nameForField){
   if(!data.rosters || typeof data.rosters !== 'object' || Array.isArray(data.rosters)){
     data.rosters = {};
   }
+  if(!data.rosterShuffle || typeof data.rosterShuffle !== 'object' || Array.isArray(data.rosterShuffle)){
+    data.rosterShuffle = {};
+  }
+  if(!Array.isArray(data.textBoxes)) data.textBoxes = [];
   chart = data;
+  selectedTextBoxId = null;
   selectedId = null;
   undoStack = [];
   redoStack = [];
@@ -5239,6 +5701,26 @@ document.getElementById('printChartBtn').onclick = ()=>{
     const out = composeExportCanvas(mode, scale);
     printCanvas(out);
   }, null, false);
+};
+
+// ---------------- COLLAPSIBLE SECTIONS ----------------
+document.querySelectorAll('.section h3.collapsible').forEach(h3=>{
+  h3.addEventListener('click', ()=>{
+    const section = h3.closest('.section');
+    if(section) section.classList.toggle('collapsed');
+  });
+});
+document.getElementById('collapseAllBtn').onclick = ()=>{
+  document.querySelectorAll('.section h3.collapsible').forEach(h3=>{
+    const section = h3.closest('.section');
+    if(section) section.classList.add('collapsed');
+  });
+};
+document.getElementById('expandAllBtn').onclick = ()=>{
+  document.querySelectorAll('.section h3.collapsible').forEach(h3=>{
+    const section = h3.closest('.section');
+    if(section) section.classList.remove('collapsed');
+  });
 };
 
 // ---------------- INIT ----------------
