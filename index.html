@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.6.0</span>
+        v<span id="appVersion">4.7.0</span>
       </div>
     </div>
   </aside>
@@ -1595,7 +1595,7 @@ function wrapNameForDisplay(name){
 // Draws one or more lines of text centered at (x,y) with a translucent, rounded-corner
 // background chip sized to fit -- keeps names legible over the seat's color/icon and
 // the stage floor texture, however long or short the name is.
-function drawTextChip(ctx, lines, x, y, fontPx, textColor){
+function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected){
   ctx.font = `600 ${fontPx}px Inter, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1611,6 +1611,17 @@ function drawTextChip(ctx, lines, x, y, fontPx, textColor){
   if(ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, Math.min(6, boxH / 2));
   else ctx.rect(boxX, boxY, boxW, boxH);
   ctx.fill();
+  if(selected){
+    ctx.save();
+    ctx.strokeStyle = '#B8842A';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(boxX-3, boxY-3, boxW+6, boxH+6, Math.min(8, (boxH+6)/2));
+    else ctx.rect(boxX-3, boxY-3, boxW+6, boxH+6);
+    ctx.stroke();
+    ctx.restore();
+  }
   ctx.fillStyle = textColor || '#242019';
   const startY = y - (lines.length - 1) * lineHeight / 2;
   lines.forEach((line, i)=>{
@@ -3192,7 +3203,7 @@ function render(){
       if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
       const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
       const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
-      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale);
+      drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale, undefined, isSel);
       ctx.restore();
 
       if(chart.showLabels && seat.label){
