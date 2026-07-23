@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.10.0</span>
+        v<span id="appVersion">4.12.1</span>
       </div>
     </div>
   </aside>
@@ -1294,6 +1294,32 @@ function baseRadius(){ return Math.max(60, seatRadius()*3.2); }
 // counts from demanding a radius so large that the row's own middle seat goes off the
 // top of the canvas, independent of anything the row/seat spacing sliders can fix.
 function maxRowRadius(){ return Math.min(canvas.width, canvas.height) * 0.85; }
+
+// Computes a row's radius given the previous row's radius and the (possibly scaled)
+// gap between them, clamped to the canvas-fit boundary -- but NEVER letting the result
+// collide with or fall behind the previous row's radius. If the boundary itself doesn't
+// leave room for a minimum separation, this extends slightly past it rather than
+// letting two rows land on the exact same depth (which visually merges them together).
+function clampedRowRadius(prevRadius, gap){
+  const cap = maxRowRadius();
+  const minGap = Math.max(20, seatRadius() * 0.8);
+  return Math.max(Math.min(prevRadius + gap, cap), prevRadius + minGap);
+}
+
+// Resolves any pre-existing radius collisions between adjacent rows (e.g. from an
+// earlier session, a loaded file, or any other path that touched rowRadii directly).
+// Stage spacing reads rowRadii as-is to compute each row's depth, so if two rows
+// already share (or nearly share) a radius, they'll visually merge regardless of what
+// anchor is chosen -- running this first guarantees proper separation beforehand.
+function dedupeRowRadii(){
+  const minGap = Math.max(20, seatRadius() * 0.8);
+  for(let i=1; i<chart.rowIndex; i++){
+    if(chart.rowRadii[i] === undefined || chart.rowRadii[i-1] === undefined) continue;
+    if(chart.rowRadii[i] < chart.rowRadii[i-1] + minGap){
+      chart.rowRadii[i] = chart.rowRadii[i-1] + minGap;
+    }
+  }
+}
 
 // Hard safety net: no matter how many seats are packed into a row, its span is capped
 // so the row's own horizontal extent always fits within the canvas. At extreme seat
@@ -1734,6 +1760,7 @@ function reshapeRowArc(rowIndex, sagitta, overrideManualIds){
 
   seats.forEach(s=>{
     if(s.rowT === 0 || s.rowT === 1 || s.rowT === undefined) return;
+    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
     if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     const ang = angle0 + dAngle*s.rowT;
     s.x = cx + Math.cos(ang)*R;
@@ -1834,6 +1861,7 @@ function reshapeStraightRowWidth(rowIndex, targetWidth, overrideManualIds){
   const cx = canvas.width/2;
   const startX = cx - width/2;
   seats.forEach(s=>{
+    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
     if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     s.x = seats.length===1 ? cx : startX + width*s.rowT;
   });
@@ -1852,6 +1880,7 @@ function rebuildArcRow(rowIndex, cyOverride, overrideManualIds){
   const startAngle = Math.PI/2 - spanRad/2;
   chart.seats.filter(s=>s.row===rowIndex).forEach(s=>{
     if(s.rowT === undefined) return;
+    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
     if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     const angle = startAngle + s.rowT*spanRad;
     s.x = cx - Math.cos(angle)*radius;
@@ -1887,6 +1916,7 @@ function rebuildStraightRow(rowIndex, cyOverride, overrideManualIds){
 
   const seats = chart.seats.filter(s=>s.row===rowIndex);
   seats.forEach(s=>{
+    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
     if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
     s.y = y;
     if(clampedWidth !== undefined && s.rowT !== undefined){
@@ -2084,7 +2114,7 @@ function applyRowSpacing(newValue){
     const gapBase = chart.rowGapBase[i] || 0;
     const prevRadius = chart.rowRadii[i-1];
     if(prevRadius === undefined) continue;
-    chart.rowRadii[i] = Math.min(prevRadius + gapBase*factor, maxRowRadius());
+    chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*factor);
   }
   for(let i=0;i<chart.rowIndex;i++){
     rebuildArcRow(i);
@@ -2113,6 +2143,7 @@ function applyRowSpacing(newValue){
 // selected row's own gap from the row immediately ahead of it is scaled; rows with no
 // selected seat (including ones in between) are left exactly where they are.
 function applyRowSpacingToSelection(newValue){
+  dedupeRowRadii();
   const rows = [...rowsInSelection()].sort((a,b)=>a-b);
   rows.forEach(i=>{
     if(i === 0) return; // row 0 is the anchor -- nothing ahead of it to scale a gap from
@@ -2122,7 +2153,7 @@ function applyRowSpacingToSelection(newValue){
     let effective = newValue;
     let guard = 0;
     while(guard < 25){
-      chart.rowRadii[i] = Math.min(prevRadius + gapBase*(effective/100), maxRowRadius());
+      chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*(effective/100));
       rebuildArcRow(i, undefined, selection);
       rebuildStraightRow(i, undefined, selection);
       if(!rowOverflowsCanvas(i) || effective <= 60) return;
@@ -2174,6 +2205,7 @@ function applyStageSpacing(newValue){
 // Same idea, but only the rows represented in the current selection are shifted to the
 // new anchor position; every other row keeps using the persisted global anchor.
 function applyStageSpacingToSelection(newValue){
+  dedupeRowRadii();
   const rawAnchor = anchorYForStageSpacing(newValue);
   const rows = rowsInSelection();
   const anchor = clampAnchorForRows(rawAnchor, [...rows]);
@@ -2181,6 +2213,13 @@ function applyStageSpacingToSelection(newValue){
     rebuildArcRow(i, anchor, selection);
     rebuildStraightRow(i, anchor, selection);
   });
+  if(freeformStageSnapshot){
+    const delta = anchor - freeformStageSnapshot.anchor;
+    freeformStageSnapshot.seats.forEach(({id, y})=>{
+      const s = getSeat(id);
+      if(s) s.y = y + delta;
+    });
+  }
 }
 
 function getSeatBBox(){
@@ -2284,7 +2323,7 @@ function applyRowSpacingRaw(newValue){
     const gapBase = chart.rowGapBase[i] || 0;
     const prevRadius = chart.rowRadii[i-1];
     if(prevRadius === undefined) continue;
-    chart.rowRadii[i] = Math.min(prevRadius + gapBase*factor, maxRowRadius());
+    chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*factor);
   }
   for(let i=0;i<chart.rowIndex;i++){
     rebuildArcRow(i);
@@ -3984,6 +4023,7 @@ function setSpacingSlidersScope(scoped){
 // fresh from a snapshot taken the moment the group was selected, so the two sliders
 // compose correctly no matter which one is touched first.
 let customGroupSnapshot = null;
+let freeformStageSnapshot = null; // { anchor, seats:[{id,y}] } -- captured at the start of a stage-spacing drag, so freeform chairs (no formal row) shift by the same amount the rest of the formation moves
 let customGroupSeatPct = 100;
 let customGroupRowPct = 100;
 
@@ -4605,7 +4645,7 @@ document.getElementById('deleteSeatBtn').onclick = ()=>{
   if(s.standPartner){
     delete chart.standPositions[standKeyPair(s.id, s.standPartner)];
     const partner = getSeat(s.standPartner);
-    if(partner) partner.standPartner = null;
+    if(partner){ partner.standPartner = null; partner.stand = true; }
   }
   chart.seats = chart.seats.filter(seat=>seat.id!==selectedId);
   renumberRow(row);
@@ -4689,7 +4729,7 @@ document.getElementById('batchDeleteBtn').onclick = ()=>{
       if(s.standPartner){
         delete chart.standPositions[standKeyPair(id, s.standPartner)];
         const partner = getSeat(s.standPartner);
-        if(partner) partner.standPartner = null;
+        if(partner){ partner.standPartner = null; partner.stand = true; }
       }
     }
   });
@@ -5018,7 +5058,15 @@ document.getElementById('rowSpacingSlider').oninput = e=>{
   else applyRowSpacing(val);
   render();
 };
-document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>pushHistory());
+document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>{
+  pushHistory();
+  const freeformSelected = [...selection].map(id=>getSeat(id)).filter(s=>s && s.row===-1);
+  freeformStageSnapshot = freeformSelected.length > 0 ? {
+    anchor: anchorYForStageSpacing(chart.stageSpacing),
+    seats: freeformSelected.map(s=>({ id: s.id, y: s.y })),
+  } : null;
+});
+document.getElementById('stageSpacingSlider').addEventListener('change', ()=>{ freeformStageSnapshot = null; });
 document.getElementById('stageSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
@@ -5052,6 +5100,10 @@ document.getElementById('undoBtn').onclick = undo;
 document.getElementById('redoBtn').onclick = redo;
 let nudgeSessionActive = false; // coalesces arrow-key nudges into one undo step per session
 window.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.activeElement && document.activeElement.type === 'range'){
+    document.activeElement.blur();
+    return;
+  }
   const tag = (e.target.tagName||'').toLowerCase();
   if(tag==='input' || tag==='textarea' || tag==='select') return;
   const meta = e.ctrlKey || e.metaKey;
@@ -5092,7 +5144,7 @@ window.addEventListener('keydown', e=>{
         if(s.standPartner){
           delete chart.standPositions[standKeyPair(id, s.standPartner)];
           const partner = getSeat(s.standPartner);
-          if(partner) partner.standPartner = null;
+          if(partner){ partner.standPartner = null; partner.stand = true; }
         }
       }
     });
