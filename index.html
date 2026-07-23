@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.9.1</span>
+        v<span id="appVersion">4.10.0</span>
       </div>
     </div>
   </aside>
@@ -1614,10 +1614,26 @@ function getRosterAssignments(){
 // Splits a name onto up to two lines at its first space (e.g. "Alice Chen" ->
 // ["Alice","Chen"]), so first+last names wrap cleanly instead of overlapping
 // neighboring seats. A name with no space renders on a single line.
-function wrapNameForDisplay(name){
+function wrapNameForDisplay(name, ctx, fontPx){
   const idx = name.indexOf(' ');
   if(idx === -1) return [name];
-  return [name.slice(0, idx), name.slice(idx + 1)];
+  const first = name.slice(0, idx);
+  const rest = name.slice(idx + 1);
+
+  // If the remainder is a hyphenated surname wide enough to make the chip
+  // uncomfortably wide, split it at the hyphen onto a 3rd line instead.
+  if(ctx && fontPx && rest.indexOf('-') !== -1){
+    ctx.font = `600 ${fontPx}px Inter, sans-serif`;
+    const firstWidth = ctx.measureText(first).width;
+    const restWidth = ctx.measureText(rest).width;
+    if(restWidth > firstWidth * 1.4 && restWidth > fontPx * 5){
+      const hyphenIdx = rest.indexOf('-');
+      const beforeHyphen = rest.slice(0, hyphenIdx + 1); // keep the hyphen with the first fragment
+      const afterHyphen = rest.slice(hyphenIdx + 1);
+      if(beforeHyphen && afterHyphen) return [first, beforeHyphen, afterHyphen];
+    }
+  }
+  return [first, rest];
 }
 
 // Draws one or more lines of text centered at (x,y) with a translucent, rounded-corner
@@ -1648,7 +1664,7 @@ function drawTextChip(ctx, lines, x, y, fontPx, textColor, selected, bgColor){
   // on the separate grayscale post-processing pass to "happen to" preserve contrast.
   const forceBW = exportRenderOptions && exportRenderOptions.bw;
   const effectiveBg = (bgColor && !forceBW) ? bgColor : null;
-  ctx.fillStyle = effectiveBg ? hexWithAlpha(effectiveBg, 0.75) : 'rgba(247,243,233,0.75)';
+  ctx.fillStyle = effectiveBg ? hexWithAlpha(effectiveBg, 0.5) : 'rgba(247,243,233,0.5)';
   ctx.beginPath();
   if(ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, Math.min(6, boxH / 2));
   else ctx.rect(boxX, boxY, boxW, boxH);
@@ -3277,9 +3293,9 @@ function render(){
       if(chart.showLabels && seat.label){
         ctx.save();
         if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-        const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
         const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
         const nameFontPx = Math.max(9, sr*0.34) * rosterScale;
+        const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id), ctx, nameFontPx);
         const nameChipH = textChipHeight(nameLines, nameFontPx);
         const nameCenterY = seat.y + off.dy*sr + 1;
         const nameBottom = nameCenterY + nameChipH/2;
@@ -3316,9 +3332,10 @@ function render(){
     const off = INSTRUMENT_LABEL_OFFSET[seat.preset] || { dx: 0, dy: 0 };
     ctx.save();
     if(chart.flipped){ ctx.translate(seat.x, seat.y); ctx.scale(-1,-1); ctx.translate(-seat.x,-seat.y); }
-    const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id));
     const rosterScale = (seat.rosterTextScale || chart.rosterTextScale || 100) / 100;
-    drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, Math.max(9, sr*0.34) * rosterScale, undefined, isSel, seat.color);
+    const nameFontPxForDraw = Math.max(9, sr*0.34) * rosterScale;
+    const nameLines = wrapNameForDisplay(rosterAssignments.get(seat.id), ctx, nameFontPxForDraw);
+    drawTextChip(ctx, nameLines, seat.x + off.dx*sr, seat.y + off.dy*sr + 1, nameFontPxForDraw, undefined, isSel, seat.color);
     ctx.restore();
   });
 
