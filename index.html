@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.12.1</span>
+        v<span id="appVersion">4.13.0</span>
       </div>
     </div>
   </aside>
@@ -5102,6 +5102,11 @@ let nudgeSessionActive = false; // coalesces arrow-key nudges into one undo step
 window.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && document.activeElement && document.activeElement.type === 'range'){
     document.activeElement.blur();
+    return;
+  }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p'){
+    e.preventDefault();
+    document.getElementById('printChartBtn').click();
     return;
   }
   const tag = (e.target.tagName||'').toLowerCase();
