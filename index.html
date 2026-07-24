@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.15.0</span>
+        v<span id="appVersion">4.17.0</span>
       </div>
     </div>
   </aside>
@@ -1311,6 +1311,22 @@ function clampedRowRadius(prevRadius, gap){
 // Stage spacing reads rowRadii as-is to compute each row's depth, so if two rows
 // already share (or nearly share) a radius, they'll visually merge regardless of what
 // anchor is chosen -- running this first guarantees proper separation beforehand.
+// Computes what a row's radius would be under the pure cascading row-spacing formula at
+// a given percentage, without mutating chart.rowRadii. Rows outside rowsBeingProcessed
+// keep their current stored radius (matching applyRowSpacingToSelection's own behavior
+// of only touching rows actually in the selection). Used so a manually-moved seat's
+// "before" reference is computed the same way the formula itself computes it -- if the
+// stored radii don't perfectly match a clean cascade (common after past manual edits),
+// using the raw stored value as the reference would introduce a spurious jump the
+// moment the slider is first touched, even for a tiny nudge.
+function computeFormulaRowRadius(rowIndex, pct, rowsBeingProcessed){
+  if(rowIndex <= 0 || !rowsBeingProcessed.has(rowIndex)) return chart.rowRadii[rowIndex];
+  const gapBase = chart.rowGapBase[rowIndex] || 0;
+  const prevRadius = computeFormulaRowRadius(rowIndex - 1, pct, rowsBeingProcessed);
+  if(prevRadius === undefined) return chart.rowRadii[rowIndex];
+  return clampedRowRadius(prevRadius, gapBase * (pct/100));
+}
+
 function dedupeRowRadii(){
   const minGap = Math.max(20, seatRadius() * 0.8);
   for(let i=1; i<chart.rowIndex; i++){
@@ -1760,8 +1776,13 @@ function reshapeRowArc(rowIndex, sagitta, overrideManualIds){
 
   seats.forEach(s=>{
     if(s.rowT === 0 || s.rowT === 1 || s.rowT === undefined) return;
-    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
-    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
+    // Manually-moved seats (including custom-toggled ones) are never repositioned by
+    // this formula, even when selected/overridden -- snapping them to the row's absolute
+    // formula position would discard whatever manual offset they had, causing a visible
+    // "jump" before the slider's own adjustment applies. Their movement is instead
+    // handled separately via a position-preserving snapshot that shifts/scales their
+    // CURRENT position, so they move relative to where they actually are.
+    if(s.layoutMode === 'custom' || s.manuallyMoved) return;
     const ang = angle0 + dAngle*s.rowT;
     s.x = cx + Math.cos(ang)*R;
     s.y = cy + Math.sin(ang)*R;
@@ -1811,6 +1832,24 @@ function rowsInSelection(){
   return rows;
 }
 
+// The selection to use for seat/row/stage spacing specifically: the real selection when
+// something's selected, or an implicit "everyone" selection when nothing is. This is
+// what lets the global sliders (nothing selected) move every seat -- including
+// manually-moved ones and freeform chairs -- as if they were all explicitly selected,
+// rather than only reshaping seats the row-shape formula would normally touch.
+function effectiveSpacingSelection(){
+  if(selection.size > 0) return selection;
+  return new Set(chart.seats.filter(s=>!s.hidden).map(s=>s.id));
+}
+function rowsForSpacing(){
+  const rows = new Set();
+  effectiveSpacingSelection().forEach(id=>{
+    const s = getSeat(id);
+    if(s && s.row !== -1) rows.add(s.row);
+  });
+  return rows;
+}
+
 // Same reshape as applySeatSpacing, but scoped to only the rows that have a selected
 // seat -- the rest of the chart, and the persisted global spacing value, are untouched.
 // Checks only one row's own seats against the canvas bounds -- used by the scoped
@@ -1829,22 +1868,49 @@ function rowOverflowsCanvas(rowIndex){
          (margin+r)-minY > 0.5 || (maxY+r)-(canvas.height-margin) > 0.5;
 }
 
+// Same check, but horizontal-only -- used by the seat-spacing backoff loop specifically.
+// Seat spacing on a straight row only ever adjusts x (never y), so a row with a
+// pre-existing vertical offset unrelated to spacing (e.g. a soloist seat positioned
+// slightly forward) would otherwise trigger an unresolvable "overflow" every time,
+// since narrowing the row's width can never fix a y-margin violation -- forcing the
+// backoff loop to always collapse to its floor regardless of the requested value.
+function rowOverflowsCanvasX(rowIndex){
+  const margin = 24, r = seatRadius();
+  const seats = chart.seats.filter(s=>s.row===rowIndex && !s.hidden);
+  if(seats.length === 0) return false;
+  let minX=Infinity, maxX=-Infinity;
+  seats.forEach(s=>{
+    minX = Math.min(minX, s.x); maxX = Math.max(maxX, s.x);
+  });
+  return (margin+r)-minX > 0.5 || (maxX+r)-(canvas.width-margin) > 0.5;
+}
+
 function applySeatSpacingToSelection(newValue){
-  rowsInSelection().forEach(rowIndex=>{
+  if(!seatSpacingCustomSnapshot) captureSeatSpacingSnapshot();
+  const effSel = effectiveSpacingSelection();
+  if(selection.size === 0) chart.seatSpacing = newValue;
+  rowsForSpacing().forEach(rowIndex=>{
+    const rowSeats = chart.seats.filter(s=>s.row===rowIndex && !s.hidden);
+    const allManualOrCustom = rowSeats.length > 0 && rowSeats.every(s=>s.layoutMode==='custom' || s.manuallyMoved);
     let effective = newValue;
     let guard = 0;
     let applied = false;
     while(guard < 25){
       if(chart.rowShapes[rowIndex] === 'arc' && chart.rowSagittaBase[rowIndex] !== undefined){
-        reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100), selection);
+        reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100), effSel);
       } else if(chart.rowShapes[rowIndex] === 'straight' && chart.rowWidthBase[rowIndex] !== undefined){
-        reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100), selection);
+        reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100), effSel);
       } else {
         break; // no valid shape/base for this row -- nothing more to reshape
       }
       chart.rowSeatSpacingPct[rowIndex] = effective;
       applied = true;
-      if(!rowOverflowsCanvas(rowIndex) || effective <= 60) break;
+      // No real seat is actually driven by this formula when every seat in the row is
+      // manually-moved/custom -- checking overflow here would only ever reflect stale
+      // positions from whatever value was last applied, not the current target.
+      if(allManualOrCustom) break;
+      const overflowCheck = chart.rowShapes[rowIndex] === 'straight' ? rowOverflowsCanvasX : rowOverflowsCanvas;
+      if(!overflowCheck(rowIndex) || effective <= 60) break;
       effective = Math.max(60, effective - 4);
       guard++;
     }
@@ -1855,16 +1921,39 @@ function applySeatSpacingToSelection(newValue){
     if(applied && seatSpacingCustomSnapshot && seatSpacingCustomSnapshot[rowIndex]){
       const snap = seatSpacingCustomSnapshot[rowIndex];
       const ratio = effective / snap.startPct;
+      const isArc = chart.rowShapes[rowIndex] === 'arc';
       const pod = podiumPoint();
+      const cx = canvas.width/2;
       snap.seats.forEach(({id, x, y})=>{
         const s = getSeat(id);
-        if(s){
+        if(!s) return;
+        if(isArc){
           s.x = pod.x + (x - pod.x) * ratio;
           s.y = pod.y + (y - pod.y) * ratio;
+        } else {
+          // Straight rows only ever widen/narrow horizontally -- y stays exactly where
+          // it was, matching reshapeStraightRowWidth's own behavior for normal seats.
+          s.x = cx + (x - cx) * ratio;
         }
       });
     }
   });
+  // Freeform chairs have no row of their own, so seat spacing has no natural formula to
+  // apply to them -- they "adopt" the same treatment an arc row's seats would get,
+  // scaling relative to the podium point, without ever changing their base position
+  // (the snapshot below always starts from wherever they actually are).
+  if(seatSpacingFreeformSnapshot){
+    const snap = seatSpacingFreeformSnapshot;
+    const ratio = newValue / snap.startPct;
+    const pod = podiumPoint();
+    snap.seats.forEach(({id, x, y})=>{
+      const s = getSeat(id);
+      if(s){
+        s.x = pod.x + (x - pod.x) * ratio;
+        s.y = pod.y + (y - pod.y) * ratio;
+      }
+    });
+  }
 }
 
 // Scales a straight row's total width around its own center, spreading (or tightening)
@@ -1879,8 +1968,13 @@ function reshapeStraightRowWidth(rowIndex, targetWidth, overrideManualIds){
   const cx = canvas.width/2;
   const startX = cx - width/2;
   seats.forEach(s=>{
-    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
-    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
+    // Manually-moved seats (including custom-toggled ones) are never repositioned by
+    // this formula, even when selected/overridden -- snapping them to the row's absolute
+    // formula position would discard whatever manual offset they had, causing a visible
+    // "jump" before the slider's own adjustment applies. Their movement is instead
+    // handled separately via a position-preserving snapshot that shifts/scales their
+    // CURRENT position, so they move relative to where they actually are.
+    if(s.layoutMode === 'custom' || s.manuallyMoved) return;
     s.x = seats.length===1 ? cx : startX + width*s.rowT;
   });
 }
@@ -1898,8 +1992,13 @@ function rebuildArcRow(rowIndex, cyOverride, overrideManualIds){
   const startAngle = Math.PI/2 - spanRad/2;
   chart.seats.filter(s=>s.row===rowIndex).forEach(s=>{
     if(s.rowT === undefined) return;
-    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
-    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
+    // Manually-moved seats (including custom-toggled ones) are never repositioned by
+    // this formula, even when selected/overridden -- snapping them to the row's absolute
+    // formula position would discard whatever manual offset they had, causing a visible
+    // "jump" before the slider's own adjustment applies. Their movement is instead
+    // handled separately via a position-preserving snapshot that shifts/scales their
+    // CURRENT position, so they move relative to where they actually are.
+    if(s.layoutMode === 'custom' || s.manuallyMoved) return;
     const angle = startAngle + s.rowT*spanRad;
     s.x = cx - Math.cos(angle)*radius;
     s.y = cy - Math.sin(angle)*radius;
@@ -1934,8 +2033,13 @@ function rebuildStraightRow(rowIndex, cyOverride, overrideManualIds){
 
   const seats = chart.seats.filter(s=>s.row===rowIndex);
   seats.forEach(s=>{
-    if(s.layoutMode === 'custom') return; // explicitly converted to a different shape -- never follow the row's native formula, regardless of selection
-    if(s.manuallyMoved && !(overrideManualIds && overrideManualIds.has(s.id))) return;
+    // Manually-moved seats (including custom-toggled ones) are never repositioned by
+    // this formula, even when selected/overridden -- snapping them to the row's absolute
+    // formula position would discard whatever manual offset they had, causing a visible
+    // "jump" before the slider's own adjustment applies. Their movement is instead
+    // handled separately via a position-preserving snapshot that shifts/scales their
+    // CURRENT position, so they move relative to where they actually are.
+    if(s.layoutMode === 'custom' || s.manuallyMoved) return;
     s.y = y;
     if(clampedWidth !== undefined && s.rowT !== undefined){
       s.x = seats.length === 1 ? cx : startX + clampedWidth*s.rowT;
@@ -2161,8 +2265,11 @@ function applyRowSpacing(newValue){
 // selected row's own gap from the row immediately ahead of it is scaled; rows with no
 // selected seat (including ones in between) are left exactly where they are.
 function applyRowSpacingToSelection(newValue){
+  if(!rowSpacingCustomSnapshot && !rowSpacingFreeformSnapshot) captureRowSpacingSnapshot();
+  if(selection.size === 0) chart.rowSpacing = newValue;
   dedupeRowRadii();
-  const rows = [...rowsInSelection()].sort((a,b)=>a-b);
+  const rows = [...rowsForSpacing()].sort((a,b)=>a-b);
+  const effSel = effectiveSpacingSelection();
   rows.forEach(i=>{
     if(i === 0) return; // row 0 is the anchor -- nothing ahead of it to scale a gap from
     const gapBase = chart.rowGapBase[i] || 0;
@@ -2173,8 +2280,8 @@ function applyRowSpacingToSelection(newValue){
     let done = false;
     while(!done && guard < 25){
       chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*(effective/100));
-      rebuildArcRow(i, undefined, selection);
-      rebuildStraightRow(i, undefined, selection);
+      rebuildArcRow(i, undefined, effSel);
+      rebuildStraightRow(i, undefined, effSel);
       if(!rowOverflowsCanvas(i) || effective <= 60){ done = true; }
       else { effective = Math.max(60, effective - 4); guard++; }
     }
@@ -2190,6 +2297,20 @@ function applyRowSpacingToSelection(newValue){
       });
     }
   });
+  // Freeform chairs have no row of their own -- they "adopt" the behavior a row's seats
+  // would get, scaling their depth-from-podium by the same ratio the row-spacing factor
+  // changes, without ever moving their base (starting) position.
+  if(rowSpacingFreeformSnapshot){
+    const snap = rowSpacingFreeformSnapshot;
+    const ratio = newValue / snap.startPct;
+    snap.seats.forEach(({id, x, y})=>{
+      const s = getSeat(id);
+      if(s){
+        s.x = snap.pod.x + (x - snap.pod.x) * ratio;
+        s.y = snap.pod.y + (y - snap.pod.y) * ratio;
+      }
+    });
+  }
 }
 
 // Stage spacing adjusts the shared anchor's y-position (i.e. the y-axis of every row's
@@ -2234,13 +2355,16 @@ function applyStageSpacing(newValue){
 // Same idea, but only the rows represented in the current selection are shifted to the
 // new anchor position; every other row keeps using the persisted global anchor.
 function applyStageSpacingToSelection(newValue){
+  if(!freeformStageSnapshot) captureStageSpacingSnapshot();
+  if(selection.size === 0) chart.stageSpacing = newValue;
   dedupeRowRadii();
   const rawAnchor = anchorYForStageSpacing(newValue);
-  const rows = rowsInSelection();
+  const rows = rowsForSpacing();
   const anchor = clampAnchorForRows(rawAnchor, [...rows]);
+  const effSel = effectiveSpacingSelection();
   rows.forEach(i=>{
-    rebuildArcRow(i, anchor, selection);
-    rebuildStraightRow(i, anchor, selection);
+    rebuildArcRow(i, anchor, effSel);
+    rebuildStraightRow(i, anchor, effSel);
   });
   if(freeformStageSnapshot){
     const delta = anchor - freeformStageSnapshot.anchor;
@@ -3869,6 +3993,13 @@ function setSelection(ids){
   if(selectedId) lastInteractedSeatId = selectedId;
   podiumSelected = false;
   selectedTextBoxId = null;
+  // These snapshots are only valid for the selection they were captured under -- any
+  // selection change invalidates them, forcing a fresh capture on the next drag.
+  seatSpacingCustomSnapshot = null;
+  seatSpacingFreeformSnapshot = null;
+  rowSpacingCustomSnapshot = null;
+  rowSpacingFreeformSnapshot = null;
+  freeformStageSnapshot = null;
   refreshSelectionUI();
   render();
 }
@@ -4056,6 +4187,7 @@ function setSpacingSlidersScope(scoped){
     seatSlider.value = 100;
     rowSlider.value = 100;
     stageSlider.value = 100;
+    lastRowSpacingPct = 100;
     captureCustomGroupSnapshot();
   } else {
     seatLabel.textContent = 'Seat spacing';
@@ -4064,6 +4196,7 @@ function setSpacingSlidersScope(scoped){
     seatSlider.value = chart.seatSpacing || 100;
     rowSlider.value = chart.rowSpacing || 100;
     stageSlider.value = chart.stageSpacing || 100;
+    lastRowSpacingPct = chart.rowSpacing || 100;
     customGroupSnapshot = null;
   }
 }
@@ -4078,14 +4211,21 @@ function setSpacingSlidersScope(scoped){
 let customGroupSnapshot = null;
 let freeformStageSnapshot = null; // { anchor, seats:[{id,y}] } -- captured at the start of a stage-spacing drag, so freeform chairs (no formal row) and custom-straight seats shift by the same amount the rest of the formation moves
 let rowSpacingCustomSnapshot = null; // { [rowIndex]: {startRadius, seats:[{id,y}]} } -- lets selected custom-straight seats shift with their row's own depth change during a row-spacing drag
+let rowSpacingFreeformSnapshot = null; // {startPct, pod:{x,y}, seats:[{id,x,y}]} -- freeform chairs scale their depth-from-podium by the same ratio the row-spacing factor changes, as if they belonged to a row
+let lastRowSpacingPct = 100; // the slider's value as of the last processed input -- NOT read from the DOM directly, since by the time an input handler runs the slider's .value already reflects the NEW target, not the value being dragged FROM
 let seatSpacingCustomSnapshot = null; // { [rowIndex]: {startPct, seats:[{id,x,y}]} } -- lets selected custom-straight seats scale relative to the podium point during a seat-spacing drag
+let seatSpacingFreeformSnapshot = null; // {startPct, seats:[{id,x,y}]} -- freeform chairs "adopt" the same podium-relative scaling an arc row's seats get, since they have no row of their own
 let customGroupSeatPct = 100;
 let customGroupRowPct = 100;
 
 function isCustomGroupSelection(){
-  return selection.size >= 2 && [...selection].every(id=>{
-    const s = getSeat(id);
-    if(!s || !s.manuallyMoved) return false;
+  if(selection.size < 2) return false;
+  const seats = [...selection].map(id=>getSeat(id));
+  if(seats.some(s => !s)) return false;
+  const firstRow = seats[0].row;
+  return seats.every(s=>{
+    if(!s.manuallyMoved) return false;
+    if(s.row !== firstRow) return false; // seats from different rows are different lines, not one continuous line
     // Explicitly toggled to a custom line/arc, or naturally sitting in a straight row --
     // both are already conceptually "a line," so scoping spacing to it as a line makes
     // sense. A manually-nudged seat that's still part of an arc row is NOT a line, and
@@ -5097,11 +5237,11 @@ document.getElementById('rosterTextSize').oninput = e=>{
   }
   render();
 };
-document.getElementById('seatSpacing').addEventListener('mousedown', ()=>{
-  pushHistory();
+function captureSeatSpacingSnapshot(){
+  const effSel = effectiveSpacingSelection();
   const snapshot = {};
-  rowsInSelection().forEach(rowIndex=>{
-    const customSeats = chart.seats.filter(s=>s.row===rowIndex && selection.has(s.id) && s.layoutMode==='custom');
+  rowsForSpacing().forEach(rowIndex=>{
+    const customSeats = chart.seats.filter(s=>s.row===rowIndex && effSel.has(s.id) && (s.layoutMode==='custom' || s.manuallyMoved));
     if(customSeats.length > 0){
       snapshot[rowIndex] = {
         startPct: chart.rowSeatSpacingPct[rowIndex] !== undefined ? chart.rowSeatSpacingPct[rowIndex] : (chart.seatSpacing || 100),
@@ -5110,51 +5250,77 @@ document.getElementById('seatSpacing').addEventListener('mousedown', ()=>{
     }
   });
   seatSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
+
+  const freeformSeats = chart.seats.filter(s=>s.row===-1 && !s.hidden && effSel.has(s.id));
+  seatSpacingFreeformSnapshot = freeformSeats.length > 0 ? {
+    startPct: chart.seatSpacing || 100,
+    seats: freeformSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
+  } : null;
+}
+document.getElementById('seatSpacing').addEventListener('mousedown', ()=>{
+  pushHistory();
+  captureSeatSpacingSnapshot();
 });
-document.getElementById('seatSpacing').addEventListener('change', ()=>{ seatSpacingCustomSnapshot = null; });
+document.getElementById('seatSpacing').addEventListener('change', ()=>{ seatSpacingCustomSnapshot = null; seatSpacingFreeformSnapshot = null; });
 document.getElementById('seatSpacing').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupSeatPct = val; recomputeCustomGroup(); }
-  else if(selection.size > 1) applySeatSpacingToSelection(val);
-  else applySeatSpacing(val);
+  else applySeatSpacingToSelection(val);
   render();
 };
-document.getElementById('rowSpacingSlider').addEventListener('mousedown', ()=>{
-  pushHistory();
+function captureRowSpacingSnapshot(){
+  const effSel = effectiveSpacingSelection();
   const snapshot = {};
-  rowsInSelection().forEach(rowIndex=>{
-    const customSeats = chart.seats.filter(s=>s.row===rowIndex && selection.has(s.id) && s.layoutMode==='custom');
+  const rowsSet = new Set(rowsForSpacing());
+  const startPct = lastRowSpacingPct;
+  rowsSet.forEach(rowIndex=>{
+    const customSeats = chart.seats.filter(s=>s.row===rowIndex && effSel.has(s.id) && (s.layoutMode==='custom' || s.manuallyMoved));
     if(customSeats.length > 0){
       snapshot[rowIndex] = {
-        startRadius: chart.rowRadii[rowIndex],
+        startRadius: computeFormulaRowRadius(rowIndex, startPct, rowsSet),
         seats: customSeats.map(s=>({ id: s.id, y: s.y })),
       };
     }
   });
   rowSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
+
+  const freeformSeats = chart.seats.filter(s=>s.row===-1 && !s.hidden && effSel.has(s.id));
+  rowSpacingFreeformSnapshot = freeformSeats.length > 0 ? {
+    startPct,
+    pod: podiumPoint(),
+    seats: freeformSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
+  } : null;
+}
+document.getElementById('rowSpacingSlider').addEventListener('mousedown', ()=>{
+  pushHistory();
+  captureRowSpacingSnapshot();
 });
-document.getElementById('rowSpacingSlider').addEventListener('change', ()=>{ rowSpacingCustomSnapshot = null; });
+document.getElementById('rowSpacingSlider').addEventListener('change', ()=>{ rowSpacingCustomSnapshot = null; rowSpacingFreeformSnapshot = null; });
 document.getElementById('rowSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
-  else if(selection.size > 1) applyRowSpacingToSelection(val);
-  else applyRowSpacing(val);
+  else applyRowSpacingToSelection(val);
+  lastRowSpacingPct = val;
   render();
 };
-document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>{
-  pushHistory();
-  const shiftSelected = [...selection].map(id=>getSeat(id)).filter(s=>s && (s.row===-1 || s.layoutMode==='custom'));
+function captureStageSpacingSnapshot(){
+  const effSel = effectiveSpacingSelection();
+  const shiftSelected = [...effSel].map(id=>getSeat(id)).filter(s=>s && (s.row===-1 || s.layoutMode==='custom' || s.manuallyMoved));
+  const rowsForAnchor = [...rowsForSpacing()];
   freeformStageSnapshot = shiftSelected.length > 0 ? {
-    anchor: anchorYForStageSpacing(chart.stageSpacing),
+    anchor: clampAnchorForRows(anchorYForStageSpacing(chart.stageSpacing), rowsForAnchor),
     seats: shiftSelected.map(s=>({ id: s.id, y: s.y })),
   } : null;
+}
+document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>{
+  pushHistory();
+  captureStageSpacingSnapshot();
 });
 document.getElementById('stageSpacingSlider').addEventListener('change', ()=>{ freeformStageSnapshot = null; });
 document.getElementById('stageSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
-  else if(selection.size > 1) applyStageSpacingToSelection(val);
-  else applyStageSpacing(val);
+  else applyStageSpacingToSelection(val);
   render();
 };
 document.getElementById('notesInput').oninput = e=>{ chart.notes=e.target.value; render(); };
