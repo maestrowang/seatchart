@@ -809,7 +809,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       <div id="textBoxInspector" class="inspector" style="display:none;">
         <h4>Editing text box</h4>
         <label class="field"><span>Text</span>
-          <input type="text" id="textBoxContentInput">
+          <textarea id="textBoxContentInput" rows="3" style="resize:vertical;"></textarea>
         </label>
         <label class="field"><span>Font size</span>
           <input type="range" id="textBoxFontSize" min="10" max="48" value="16">
@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.13.0</span>
+        v<span id="appVersion">4.15.0</span>
       </div>
     </div>
   </aside>
@@ -1833,18 +1833,36 @@ function applySeatSpacingToSelection(newValue){
   rowsInSelection().forEach(rowIndex=>{
     let effective = newValue;
     let guard = 0;
+    let applied = false;
     while(guard < 25){
       if(chart.rowShapes[rowIndex] === 'arc' && chart.rowSagittaBase[rowIndex] !== undefined){
         reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100), selection);
       } else if(chart.rowShapes[rowIndex] === 'straight' && chart.rowWidthBase[rowIndex] !== undefined){
         reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100), selection);
       } else {
-        return;
+        break; // no valid shape/base for this row -- nothing more to reshape
       }
       chart.rowSeatSpacingPct[rowIndex] = effective;
-      if(!rowOverflowsCanvas(rowIndex) || effective <= 60) return;
+      applied = true;
+      if(!rowOverflowsCanvas(rowIndex) || effective <= 60) break;
       effective = Math.max(60, effective - 4);
       guard++;
+    }
+    // Selected custom-straight seats aren't touched by the reshape functions above
+    // (deliberately, so they never revert to following the row's native curve) -- scale
+    // them relative to the podium point by the same ratio the spacing changed, so they
+    // still widen/narrow along with the rest of the row.
+    if(applied && seatSpacingCustomSnapshot && seatSpacingCustomSnapshot[rowIndex]){
+      const snap = seatSpacingCustomSnapshot[rowIndex];
+      const ratio = effective / snap.startPct;
+      const pod = podiumPoint();
+      snap.seats.forEach(({id, x, y})=>{
+        const s = getSeat(id);
+        if(s){
+          s.x = pod.x + (x - pod.x) * ratio;
+          s.y = pod.y + (y - pod.y) * ratio;
+        }
+      });
     }
   });
 }
@@ -2152,13 +2170,24 @@ function applyRowSpacingToSelection(newValue){
     if(prevRadius === undefined) return;
     let effective = newValue;
     let guard = 0;
-    while(guard < 25){
+    let done = false;
+    while(!done && guard < 25){
       chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*(effective/100));
       rebuildArcRow(i, undefined, selection);
       rebuildStraightRow(i, undefined, selection);
-      if(!rowOverflowsCanvas(i) || effective <= 60) return;
-      effective = Math.max(60, effective - 4);
-      guard++;
+      if(!rowOverflowsCanvas(i) || effective <= 60){ done = true; }
+      else { effective = Math.max(60, effective - 4); guard++; }
+    }
+    // Selected custom-straight seats aren't touched by the row-shape formulas above
+    // (deliberately, so they never revert to following the row's native curve) -- shift
+    // them by the same amount this row's own depth changed, so they still move with it.
+    if(rowSpacingCustomSnapshot && rowSpacingCustomSnapshot[i]){
+      const snap = rowSpacingCustomSnapshot[i];
+      const delta = chart.rowRadii[i] - snap.startRadius;
+      snap.seats.forEach(({id, y})=>{
+        const s = getSeat(id);
+        if(s) s.y = y + delta;
+      });
     }
   });
 }
@@ -3381,24 +3410,33 @@ function render(){
   chart.textBoxes.forEach(tb=>{
     ctx.save();
     if(chart.flipped){ ctx.translate(tb.x, tb.y); ctx.scale(-1,-1); ctx.translate(-tb.x,-tb.y); }
-    const { fontStyle, width } = textBoxMetrics(tb);
+    const { fontStyle, width, lines, lineHeight } = textBoxMetrics(tb);
     ctx.font = fontStyle;
     ctx.textAlign = tb.align || 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#242019';
-    ctx.fillText(tb.text || '', tb.x, tb.y + 1);
-    if(tb.underline){
-      let ux;
-      if(tb.align === 'left') ux = tb.x;
-      else if(tb.align === 'right') ux = tb.x - width;
-      else ux = tb.x - width/2;
-      ctx.beginPath();
-      ctx.moveTo(ux, tb.y + tb.fontSize*0.42);
-      ctx.lineTo(ux + width, tb.y + tb.fontSize*0.42);
-      ctx.strokeStyle = '#242019';
-      ctx.lineWidth = Math.max(1, tb.fontSize*0.06);
-      ctx.stroke();
-    }
+    const startY = tb.y - (lines.length - 1) * lineHeight / 2;
+    let ux;
+    if(tb.align === 'left') ux = tb.x;
+    else if(tb.align === 'right') ux = tb.x - width;
+    else ux = tb.x - width/2;
+    lines.forEach((line, i)=>{
+      const lineY = startY + i * lineHeight;
+      ctx.fillText(line, tb.x, lineY + 1);
+      if(tb.underline){
+        const lineWidth = ctx.measureText(line).width;
+        let lux;
+        if(tb.align === 'left') lux = tb.x;
+        else if(tb.align === 'right') lux = tb.x - lineWidth;
+        else lux = tb.x - lineWidth/2;
+        ctx.beginPath();
+        ctx.moveTo(lux, lineY + tb.fontSize*0.42);
+        ctx.lineTo(lux + lineWidth, lineY + tb.fontSize*0.42);
+        ctx.strokeStyle = '#242019';
+        ctx.lineWidth = Math.max(1, tb.fontSize*0.06);
+        ctx.stroke();
+      }
+    });
     if(selectedTextBoxId === tb.id){
       const rect = textBoxRect(tb);
       ctx.strokeStyle = '#B8842A';
@@ -3511,9 +3549,11 @@ function textBoxMetrics(tb){
   const styleWord = tb.italic ? 'italic' : 'normal';
   const fontStyle = `${styleWord} ${weight} ${tb.fontSize}px Inter, sans-serif`;
   ctx.font = fontStyle;
-  const width = Math.max(10, ctx.measureText(tb.text || 'Text').width);
-  const height = tb.fontSize * 1.3;
-  return { width, height, fontStyle };
+  const lines = (tb.text || 'Text').split('\n');
+  const width = Math.max(10, ...lines.map(l => ctx.measureText(l).width));
+  const lineHeight = tb.fontSize * 1.3;
+  const height = lineHeight * lines.length;
+  return { width, height, fontStyle, lines, lineHeight };
 }
 
 // Returns a text box's bounding rect in LOGICAL (unflipped) coordinates, anchored at
@@ -3743,16 +3783,29 @@ function startInlineTextBoxEdit(tb){
   const pageX = rect.left + screenLocal.x * scaleX;
   const pageY = rect.top + screenLocal.y * scaleY;
 
-  const input = document.createElement('input');
-  input.type = 'text';
+  const fontPx = Math.max(11, tb.fontSize * scaleY);
+  const input = document.createElement('textarea');
   input.value = tb.text || '';
+  input.rows = 1;
   input.className = 'inline-seat-editor';
   input.style.left = pageX + 'px';
   input.style.top = pageY + 'px';
   input.style.width = Math.max(100, tb.fontSize * scaleY * 8) + 'px';
-  input.style.fontSize = Math.max(11, tb.fontSize * scaleY) + 'px';
+  input.style.fontSize = fontPx + 'px';
+  input.style.lineHeight = '1.3';
+  input.style.resize = 'none';
+  input.style.overflow = 'hidden';
+  input.style.whiteSpace = 'pre';
   if(tb.align !== 'center') input.style.transform = tb.align === 'left' ? 'translate(0,-50%)' : 'translate(-100%,-50%)';
   document.body.appendChild(input);
+
+  function autoResize(){
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+  }
+  input.addEventListener('input', autoResize);
+  autoResize();
+
   input.focus();
   input.select();
 
@@ -3773,12 +3826,12 @@ function startInlineTextBoxEdit(tb){
   }
   function cleanup(){
     input.removeEventListener('keydown', onKeydown);
+    input.removeEventListener('input', autoResize);
     input.removeEventListener('blur', commit);
     input.remove();
   }
   function onKeydown(e){
-    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
-    else if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
+    if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
     e.stopPropagation();
   }
   input.addEventListener('keydown', onKeydown);
@@ -4023,7 +4076,9 @@ function setSpacingSlidersScope(scoped){
 // fresh from a snapshot taken the moment the group was selected, so the two sliders
 // compose correctly no matter which one is touched first.
 let customGroupSnapshot = null;
-let freeformStageSnapshot = null; // { anchor, seats:[{id,y}] } -- captured at the start of a stage-spacing drag, so freeform chairs (no formal row) shift by the same amount the rest of the formation moves
+let freeformStageSnapshot = null; // { anchor, seats:[{id,y}] } -- captured at the start of a stage-spacing drag, so freeform chairs (no formal row) and custom-straight seats shift by the same amount the rest of the formation moves
+let rowSpacingCustomSnapshot = null; // { [rowIndex]: {startRadius, seats:[{id,y}]} } -- lets selected custom-straight seats shift with their row's own depth change during a row-spacing drag
+let seatSpacingCustomSnapshot = null; // { [rowIndex]: {startPct, seats:[{id,x,y}]} } -- lets selected custom-straight seats scale relative to the podium point during a seat-spacing drag
 let customGroupSeatPct = 100;
 let customGroupRowPct = 100;
 
@@ -5042,7 +5097,21 @@ document.getElementById('rosterTextSize').oninput = e=>{
   }
   render();
 };
-document.getElementById('seatSpacing').addEventListener('mousedown', ()=>pushHistory());
+document.getElementById('seatSpacing').addEventListener('mousedown', ()=>{
+  pushHistory();
+  const snapshot = {};
+  rowsInSelection().forEach(rowIndex=>{
+    const customSeats = chart.seats.filter(s=>s.row===rowIndex && selection.has(s.id) && s.layoutMode==='custom');
+    if(customSeats.length > 0){
+      snapshot[rowIndex] = {
+        startPct: chart.rowSeatSpacingPct[rowIndex] !== undefined ? chart.rowSeatSpacingPct[rowIndex] : (chart.seatSpacing || 100),
+        seats: customSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
+      };
+    }
+  });
+  seatSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
+});
+document.getElementById('seatSpacing').addEventListener('change', ()=>{ seatSpacingCustomSnapshot = null; });
 document.getElementById('seatSpacing').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupSeatPct = val; recomputeCustomGroup(); }
@@ -5050,7 +5119,21 @@ document.getElementById('seatSpacing').oninput = e=>{
   else applySeatSpacing(val);
   render();
 };
-document.getElementById('rowSpacingSlider').addEventListener('mousedown', ()=>pushHistory());
+document.getElementById('rowSpacingSlider').addEventListener('mousedown', ()=>{
+  pushHistory();
+  const snapshot = {};
+  rowsInSelection().forEach(rowIndex=>{
+    const customSeats = chart.seats.filter(s=>s.row===rowIndex && selection.has(s.id) && s.layoutMode==='custom');
+    if(customSeats.length > 0){
+      snapshot[rowIndex] = {
+        startRadius: chart.rowRadii[rowIndex],
+        seats: customSeats.map(s=>({ id: s.id, y: s.y })),
+      };
+    }
+  });
+  rowSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
+});
+document.getElementById('rowSpacingSlider').addEventListener('change', ()=>{ rowSpacingCustomSnapshot = null; });
 document.getElementById('rowSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
@@ -5060,10 +5143,10 @@ document.getElementById('rowSpacingSlider').oninput = e=>{
 };
 document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>{
   pushHistory();
-  const freeformSelected = [...selection].map(id=>getSeat(id)).filter(s=>s && s.row===-1);
-  freeformStageSnapshot = freeformSelected.length > 0 ? {
+  const shiftSelected = [...selection].map(id=>getSeat(id)).filter(s=>s && (s.row===-1 || s.layoutMode==='custom'));
+  freeformStageSnapshot = shiftSelected.length > 0 ? {
     anchor: anchorYForStageSpacing(chart.stageSpacing),
-    seats: freeformSelected.map(s=>({ id: s.id, y: s.y })),
+    seats: shiftSelected.map(s=>({ id: s.id, y: s.y })),
   } : null;
 });
 document.getElementById('stageSpacingSlider').addEventListener('change', ()=>{ freeformStageSnapshot = null; });
