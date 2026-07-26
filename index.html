@@ -945,7 +945,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">4.17.0</span>
+        v<span id="appVersion">5.3.0</span>
       </div>
     </div>
   </aside>
@@ -1295,48 +1295,6 @@ function baseRadius(){ return Math.max(60, seatRadius()*3.2); }
 // top of the canvas, independent of anything the row/seat spacing sliders can fix.
 function maxRowRadius(){ return Math.min(canvas.width, canvas.height) * 0.85; }
 
-// Computes a row's radius given the previous row's radius and the (possibly scaled)
-// gap between them, clamped to the canvas-fit boundary -- but NEVER letting the result
-// collide with or fall behind the previous row's radius. If the boundary itself doesn't
-// leave room for a minimum separation, this extends slightly past it rather than
-// letting two rows land on the exact same depth (which visually merges them together).
-function clampedRowRadius(prevRadius, gap){
-  const cap = maxRowRadius();
-  const minGap = Math.max(20, seatRadius() * 0.8);
-  return Math.max(Math.min(prevRadius + gap, cap), prevRadius + minGap);
-}
-
-// Resolves any pre-existing radius collisions between adjacent rows (e.g. from an
-// earlier session, a loaded file, or any other path that touched rowRadii directly).
-// Stage spacing reads rowRadii as-is to compute each row's depth, so if two rows
-// already share (or nearly share) a radius, they'll visually merge regardless of what
-// anchor is chosen -- running this first guarantees proper separation beforehand.
-// Computes what a row's radius would be under the pure cascading row-spacing formula at
-// a given percentage, without mutating chart.rowRadii. Rows outside rowsBeingProcessed
-// keep their current stored radius (matching applyRowSpacingToSelection's own behavior
-// of only touching rows actually in the selection). Used so a manually-moved seat's
-// "before" reference is computed the same way the formula itself computes it -- if the
-// stored radii don't perfectly match a clean cascade (common after past manual edits),
-// using the raw stored value as the reference would introduce a spurious jump the
-// moment the slider is first touched, even for a tiny nudge.
-function computeFormulaRowRadius(rowIndex, pct, rowsBeingProcessed){
-  if(rowIndex <= 0 || !rowsBeingProcessed.has(rowIndex)) return chart.rowRadii[rowIndex];
-  const gapBase = chart.rowGapBase[rowIndex] || 0;
-  const prevRadius = computeFormulaRowRadius(rowIndex - 1, pct, rowsBeingProcessed);
-  if(prevRadius === undefined) return chart.rowRadii[rowIndex];
-  return clampedRowRadius(prevRadius, gapBase * (pct/100));
-}
-
-function dedupeRowRadii(){
-  const minGap = Math.max(20, seatRadius() * 0.8);
-  for(let i=1; i<chart.rowIndex; i++){
-    if(chart.rowRadii[i] === undefined || chart.rowRadii[i-1] === undefined) continue;
-    if(chart.rowRadii[i] < chart.rowRadii[i-1] + minGap){
-      chart.rowRadii[i] = chart.rowRadii[i-1] + minGap;
-    }
-  }
-}
-
 // Hard safety net: no matter how many seats are packed into a row, its span is capped
 // so the row's own horizontal extent always fits within the canvas. At extreme seat
 // counts this means seats sit a little closer than the ideal minimum gap -- fitting on
@@ -1387,8 +1345,16 @@ function addRow(count, shape){
         const neededRadius = angleStep > 0 ? minGap/angleStep : baseRadius();
         radius = Math.max(prevRadius + gap, neededRadius, radius);
       }
-      radius = Math.min(radius, maxRowRadius());
-      spanRad = Math.acos(Math.min(1, chart.edgeK / radius)) * 2;
+      // Keep the row on the canvas where possible, but never at the cost of
+      // landing on top of the row it follows. Spacing adjustments can push the
+      // existing formation past this cap, and honouring the cap blindly would
+      // place the new row in FRONT of rows that are already further back.
+      radius = Math.max(Math.min(radius, maxRowRadius()), prevRadius + minGap);
+      // Aligning this row's end seats with the rest makes each successive row fan
+      // out wider. Far enough back that fan exceeds the width of the stage, so cap
+      // it: a slightly less-fanned back row is far better than refusing to place a
+      // row that has plenty of depth available to it.
+      spanRad = clampSpanForWidth(radius, Math.acos(Math.min(1, chart.edgeK / radius)) * 2);
       chart.rowRadii[rowN] = radius;
       // normalize the realized gap back to what it would be at 100% row spacing
       chart.rowGapBase[rowN] = (radius - prevRadius) / rowSpacingFactor;
@@ -1433,6 +1399,45 @@ function addRow(count, shape){
     }
   }
   fitNewRowToCanvas(rowN);
+  // The row's final position depends on things applied after it is first laid out
+  // -- seat spacing reshapes an arc's bulge, which swings its end seats forward.
+  // So rather than judging the first attempt, walk the row further back a step at
+  // a time and keep the first position that genuinely clears. This is what lets a
+  // chart with real depth left take another row instead of being told there is no
+  // room, while still stopping at the point where the stage truly runs out.
+  if(shape === 'arc' && chart.rowShapes[rowN] === 'arc' && newRowPlacementProblem(rowN)){
+    const startRadius = chart.rowRadii[rowN];
+    for(let attempt=1; attempt<=12; attempt++){
+      const tryRadius = startRadius * (1 + attempt*0.05);
+      chart.rowRadii[rowN] = tryRadius;
+      const span = clampSpanForWidth(tryRadius,
+        chart.edgeK !== undefined ? Math.acos(Math.min(1, chart.edgeK/tryRadius))*2 : chart.rowSpanRad[rowN]);
+      chart.rowSpanRad[rowN] = span;
+      chart.rowSagittaBase[rowN] = tryRadius * (1 - Math.cos(span/2));
+      rebuildArcRow(rowN);
+      if(!newRowPlacementProblem(rowN)) break;
+      if(attempt === 12){ chart.rowRadii[rowN] = startRadius; rebuildArcRow(rowN); }
+    }
+  }
+  // There is a real, finite amount of stage. If this row cannot be placed without
+  // colliding with the formation or running off the canvas, undo the whole add and
+  // say so, rather than leaving overlapping or invisible chairs behind.
+  const problem = newRowPlacementProblem(rowN);
+  if(problem){
+    chart.seats = chart.seats.filter(s=>s.row !== rowN);
+    chart.rowIndex--;
+    chart.rowShapes.length = rowN;
+    chart.rowRadii.length = rowN;
+    chart.rowSeatSpacingPct.length = rowN;
+    chart.rowGapBase.length = rowN;
+    if(chart.rowSpanRad) chart.rowSpanRad.length = rowN;
+    if(chart.rowSagittaBase) chart.rowSagittaBase.length = rowN;
+    if(chart.rowWidthBase) chart.rowWidthBase.length = rowN;
+    if(rowN === 0) chart.edgeK = undefined;
+    toast('Cannot add a row -- ' + problem + '. Try reducing row or seat spacing, or moving the formation forward with stage spacing.');
+    render();
+    return;
+  }
   render();
 }
 
@@ -1499,6 +1504,367 @@ function anchorYForStageSpacing(percent){
 
 function podiumAnchorY(){
   return anchorYForStageSpacing(chart.stageSpacing);
+}
+
+// Keeps a point within the canvas, with the same margin used elsewhere for seat
+// placement safety nets. Freeform chairs have no natural bound on how far they can
+// start from the podium point (unlike an arc row's seats, whose radius is inherently
+// constrained by the row's own geometry) -- scaling that distance by an arbitrary
+// percentage ratio can otherwise send a far-flung chair well off-screen.
+// ============================================================================
+// UNIFIED SPACING MODEL
+//
+// The three spacing sliders used to branch on what KIND of seat they were
+// moving -- formula-driven, hand-dragged, custom-shaped, or freeform -- which
+// meant four categories x three sliders = twelve code paths, each with its own
+// snapshot and its own clamp. Fixing one path routinely broke another.
+//
+// This model drops the categories. A seat is just a point, described relative
+// to the podium:
+//     depth   = how far BACK it sits   (bigger = farther from the audience)
+//     lateral = how far SIDEWAYS from centre
+// Seats at a similar depth read as "a row" whether or not the data says so,
+// which is what lets a hand-placed or fully freeform chart behave exactly like
+// a neatly rowed one.
+//
+// Each slider is then one visual intent applied uniformly to every seat:
+//     stage spacing -- slide the whole formation toward/away from the audience
+//     row  spacing  -- spread the depth-bands apart from one another
+//     seat spacing  -- spread seats sideways within their own band
+//
+// Every transform is monotonic in the coordinate it changes, so seats cannot
+// swap or overtake a neighbouring row. That falls out of the transform's shape
+// rather than being patched up afterwards by clamping individual seats, which
+// is what used to make seats jump the instant a slider moved.
+// ============================================================================
+
+const BAND_TOLERANCE_FALLBACK = 28;
+
+// How close in depth two seats must be to read as the same visual row. Derived
+// from the chart's OWN scale rather than a fixed pixel value: a fixed threshold
+// sits arbitrarily close to some charts' real row gaps, so a modest stretch
+// tips those gaps across it and silently re-groups the seats mid-drag.
+function bandTolerance(points){
+  if(points.length < 2) return BAND_TOLERANCE_FALLBACK;
+  const depths = points.map(p=>p.depth).sort((a,b)=>a-b);
+  const gaps = [];
+  for(let i=1;i<depths.length;i++){
+    const g = depths[i]-depths[i-1];
+    if(g > 0.5) gaps.push(g);
+  }
+  if(gaps.length === 0) return BAND_TOLERANCE_FALLBACK;
+  gaps.sort((a,b)=>a-b);
+  return Math.max(6, gaps[Math.floor(gaps.length/2)] * 0.55);
+}
+
+// Groups seats into visual rows by their RADIUS from the podium.
+//
+// Radius is what stays constant along a curved row: measured on real charts an
+// arc's seats vary by up to 293px in depth but only a few px in radius. Banding
+// by depth therefore tears a single arc into several pieces, which then move
+// independently -- the cause of "only the middle of the arc responds".
+//
+// A straight row is the mirror image: its depth is constant but its radius
+// genuinely varies along its length, so radius-banding can split it. Those
+// pieces all sit at the same depth, so a second pass rejoins them.
+function groupIntoBands(points, seats){
+  if(points.length === 0) return [];
+  const byId = new Map((seats||[]).map(s=>[s.id, s]));
+  const pod = podiumPoint();
+  const radiusOf = p => {
+    const s = byId.get(p.id);
+    return s ? Math.hypot(s.x-pod.x, s.y-pod.y) : p.depth;
+  };
+  const withR = points.map(p=>({ p, r: radiusOf(p) })).sort((a,b)=>a.r-b.r);
+  const gaps = [];
+  for(let i=1;i<withR.length;i++) gaps.push(withR[i].r - withR[i-1].r);
+  const nz = gaps.filter(g=>g>0.5).sort((a,b)=>a-b);
+  const med = nz.length ? nz[Math.floor(nz.length/2)] : 1;
+  const cut = Math.max(med*2.5, 12);
+  let groups = []; let cur = [withR[0].p];
+  for(let i=0;i<gaps.length;i++){
+    if(gaps[i] > cut){ groups.push(cur); cur = []; }
+    cur.push(withR[i+1].p);
+  }
+  groups.push(cur);
+
+  const medDepth = g => { const d=g.map(x=>x.depth).sort((a,b)=>a-b); return d[Math.floor(d.length/2)]; };
+  // Seats the chart already considers one row must never end up in separate
+  // bands. Radius banding splits a straight row because its radius genuinely
+  // varies along its length, and a split row would then have its halves moved
+  // by different amounts -- bending a row that should stay straight.
+  const rowsOf = g => new Set(g.map(x=>{ const o=getSeat(x.id); return o && o.row >= 0 ? o.row : null; }).filter(v=>v!==null));
+  let merged = true;
+  while(merged && groups.length > 1){
+    merged = false;
+    for(let i=0;i<groups.length-1 && !merged;i++){
+      const ri = rowsOf(groups[i]);
+      for(let j=i+1;j<groups.length;j++){
+        const rj = rowsOf(groups[j]);
+        const shares = [...ri].some(r=>rj.has(r));
+        if(shares || Math.abs(medDepth(groups[i]) - medDepth(groups[j])) < 16){
+          const removed = groups.splice(j, 1)[0];
+          groups[i] = groups[i].concat(removed);
+          merged = true; break;
+        }
+      }
+    }
+  }
+  groups.sort((a,b)=>medDepth(a)-medDepth(b));
+  return groups;
+}
+
+// Freezes everything a slider gesture needs at the moment the drag begins.
+// Banding is captured HERE and never recomputed mid-drag, because stretching a
+// chart changes which seats look like they share a row, and re-grouping partway
+// through a gesture makes seats drift and regroup under the cursor.
+function beginSpacingGesture(){
+  const anchorY = podiumAnchorY();
+  const centerX = canvas.width/2;
+  const seats = [...effectiveSpacingSelection()].map(id=>getSeat(id)).filter(s=>s && !s.hidden);
+  const points = seats.map(s=>({ id: s.id, depth: anchorY - s.y, lateral: s.x - centerX }));
+  const groups = groupIntoBands(points, seats);
+  const bandDepth = [], bandCentre = [], bandOf = new Map();
+  groups.forEach((members, i)=>{
+    bandDepth[i] = members.reduce((s,p)=>s+p.depth,0)/members.length;
+    bandCentre[i] = members.reduce((s,p)=>s+p.lateral,0)/members.length;
+    members.forEach(p=>bandOf.set(p.id, i));
+  });
+  // A seat sitting alone at its own depth -- a hand-dragged stray, or a lone
+  // freeform chair -- has no meaningful centre of its own to spread away from,
+  // so scaling it around itself would leave it frozen while the rest of the
+  // chart moved. Borrow the centre of the nearest populated band instead, so a
+  // stray seat spreads along with the row it visually belongs to.
+  // Classify each band and capture polar coordinates about the podium, so seat
+  // spacing can spread seats ALONG a curved row instead of squeezing it
+  // sideways. A row reads as flat when it barely rises across its own width --
+  // a far more robust test than curve fitting, which a couple of stray chairs
+  // sitting near the row would skew.
+  const pod = podiumPoint();
+  const bandIsArc = [], bandMeanAngle = [], bandRadius = [];
+  const angleOf = new Map(), radiusOf = new Map(), seatIsFlat = new Map();
+  groups.forEach((members, i)=>{
+    const ss = members.map(m=>getSeat(m.id)).filter(Boolean);
+    const xs = ss.map(o=>o.x), ys = ss.map(o=>o.y);
+    const spanX = xs.length ? Math.max(...xs)-Math.min(...xs) : 0;
+    const spanY = ys.length ? Math.max(...ys)-Math.min(...ys) : 0;
+    bandIsArc[i] = ss.length >= 3 && spanX > 1 && (spanY/spanX) >= 0.25;
+    let sumA = 0, sumR = 0;
+    members.forEach(m=>{
+      const o = getSeat(m.id);
+      const ang = o ? Math.atan2(o.x-pod.x, pod.y-o.y) : 0;   // 0 = straight back
+      const rad = o ? Math.hypot(o.x-pod.x, o.y-pod.y) : 0;
+      angleOf.set(m.id, ang); radiusOf.set(m.id, rad);
+      sumA += ang; sumR += rad;
+      // Straightness is decided PER SEAT, not per band. A straight row read as a
+      // curve -- or a handful of seats deliberately straightened inside a curved
+      // row -- must still travel in a straight line. The chart already knows a
+      // seat's effective shape, so trust that and fall back to the band's overall
+      // geometry only for freeform chairs that belong to no row.
+      let flat;
+      if(o && o.row !== -1) flat = rowShapeOf(o) === 'straight';
+      else flat = !bandIsArc[i];
+      seatIsFlat.set(m.id, flat);
+    });
+    bandMeanAngle[i] = members.length ? sumA/members.length : 0;
+    bandRadius[i] = members.length ? sumR/members.length : 0;
+  });
+
+  const overallCentre = points.length
+    ? points.reduce((sum,p)=>sum+p.lateral,0)/points.length : 0;
+  groups.forEach((members, i)=>{
+    if(members.length >= 2) return;
+    let best = -1, bestDist = Infinity;
+    groups.forEach((other, j)=>{
+      if(j === i || other.length < 2) return;
+      const dist = Math.abs(bandDepth[j] - bandDepth[i]);
+      if(dist < bestDist){ bestDist = dist; best = j; }
+    });
+    // If nothing else forms a row either -- a scattered freeform selection where
+    // every seat sits at its own depth -- spread around the group's collective
+    // centre instead, so the selection still behaves like one formation.
+    bandCentre[i] = best !== -1 ? bandCentre[best] : overallCentre;
+  });
+  return { anchorY, centerX, points, bandDepth, bandCentre, bandOf,
+           pod, bandIsArc, bandMeanAngle, bandRadius, angleOf, radiusOf, seatIsFlat,
+           startSeatPct: chart.seatSpacing || 100,
+           startRowPct: chart.rowSpacing || 100,
+           startStagePct: chart.stageSpacing || 100 };
+}
+
+// Translate every depth equally -- trivially order-preserving.
+function gestureStage(g, deltaDepth){
+  return g.points.map(p=>({ id:p.id, depth:p.depth + deltaDepth, lateral:p.lateral }));
+}
+
+// Scale the GAPS between consecutive bands; the frontmost band anchors in place.
+// Each seat keeps its own offset within its band, scaled by the same ratio so
+// everything expands and compresses together. Monotonic for any ratio > 0.
+function gestureRowSpacing(g, ratio){
+  if(g.bandDepth.length === 0) return g.points.slice();
+  // Rows are separated RADIALLY, by distance from the podium -- not by vertical
+  // depth. For concentric arcs those differ: two rows a fixed radial distance
+  // apart are separated vertically by that distance at the centre but by less
+  // and less toward the ends of the arc. Scaling depth therefore opens the gap
+  // correctly in the middle while barely opening it at the edges. Scaling the
+  // RADIUS opens it evenly the whole way along.
+  const nr = [g.bandRadius[0]];
+  for(let i=1;i<g.bandRadius.length;i++)
+    nr[i] = nr[i-1] + (g.bandRadius[i]-g.bandRadius[i-1]) * ratio;
+  return g.points.map(p=>{
+    const bi = g.bandOf.get(p.id);
+    const delta = nr[bi] - g.bandRadius[bi];
+    if(g.seatIsFlat && g.seatIsFlat.get(p.id)){
+      // A straight row stays straight: apply the same radial change as a plain
+      // shift straight back, rather than swinging it onto an arc.
+      return { id:p.id, lateral:p.lateral, depth: p.depth + delta + (p.depth - g.bandDepth[bi]) * (ratio-1) };
+    }
+    const rad = g.radiusOf.get(p.id) + delta + (g.radiusOf.get(p.id) - g.bandRadius[bi]) * (ratio-1);
+    const ang = g.angleOf.get(p.id);
+    const x = g.pod.x + Math.sin(ang) * rad;
+    const y = g.pod.y - Math.cos(ang) * rad;
+    return { id:p.id, depth: g.anchorY - y, lateral: x - g.centerX };
+  });
+}
+
+// Scale lateral spread within each band around that band's own centre. Depth is
+// never touched, so seat spacing structurally cannot make a seat overtake the
+// row in front or behind -- an entire class of past bugs made impossible.
+function gestureSeatSpacing(g, ratio){
+  return g.points.map(p=>{
+    const bi = g.bandOf.get(p.id);
+    if(g.seatIsFlat && g.seatIsFlat.get(p.id) === false){
+      // Spread the seats ALONG the curve by widening the angle they occupy,
+      // holding each seat's distance from the podium. The arc keeps its shape
+      // and its END seats spread just as much as the middle ones -- squeezing
+      // only the sideways coordinate instead is what made the arch "pinch"
+      // while the edge spacing never actually changed.
+      const a0 = g.bandMeanAngle[bi];
+      const ang = a0 + (g.angleOf.get(p.id) - a0) * ratio;
+      const rad = g.radiusOf.get(p.id);
+      const x = g.pod.x + Math.sin(ang) * rad;
+      const y = g.pod.y - Math.cos(ang) * rad;
+      return { id:p.id, depth: g.anchorY - y, lateral: x - g.centerX };
+    }
+    const c = g.bandCentre[bi];
+    return { id:p.id, depth:p.depth, lateral: c + (p.lateral - c) * ratio };
+  });
+}
+
+// The constraint that matters to the person using this is simply "can I still
+// see the whole seat". That is the canvas edge less the seat's own radius --
+// NOT the larger inner margin used for tidy auto-layout. Using the tidy margin
+// here treats seats a user deliberately placed near the edge as already broken,
+// which freezes the sliders for the entire chart.
+function spacingBounds(){
+  const r = seatRadius();
+  return { minX:r, maxX:canvas.width-r, minY:r, maxY:canvas.height-r };
+}
+
+// How far each seat individually sits outside the usable area, keyed by id.
+// Measuring PER SEAT rather than as one global worst-case matters: a chart may
+// already have a stray chair a little off-page, and that one chair must not veto
+// movement for every other seat on the stage.
+function gestureOverflowBySeat(g, points, bounds){
+  const m = new Map();
+  for(const p of points){
+    const x = g.centerX + p.lateral, y = g.anchorY - p.depth;
+    m.set(p.id, Math.max(bounds.minX-x, x-bounds.maxX, bounds.minY-y, y-bounds.maxY, 0));
+  }
+  return m;
+}
+
+// A layout is acceptable when no seat is further outside than it already was.
+// Seats that began off-page are allowed to stay exactly as they are -- they are
+// never yanked back into frame, which is what used to make them jump.
+function gestureNoWorse(g, points, bounds, baseline){
+  const now = gestureOverflowBySeat(g, points, bounds);
+  for(const [id, was] of baseline){
+    if((now.get(id) || 0) > was + 0.01) return false;
+  }
+  return true;
+}
+
+// If a transform would push seats off-page we do NOT clamp individual seats --
+// that made them pile against an edge and jump the moment a slider moved.
+// Instead we ease the ratio back toward neutral and re-apply the SAME transform
+// more gently, keeping relative positions and monotonicity intact. The goal is
+// "never worse than where it started", so a chart that already had seats
+// off-page is left alone rather than being yanked back into frame.
+// Closest distance between any two seats, via a sweep ordered by x so we only
+// compare seats that could plausibly be near each other.
+function gestureMinSeatGap(g, points){
+  const pts = points.map(p=>({ x: g.centerX + p.lateral, y: g.anchorY - p.depth }))
+                    .sort((a,b)=>a.x-b.x);
+  let best = Infinity;
+  for(let i=0;i<pts.length;i++){
+    for(let j=i+1;j<pts.length && (pts[j].x-pts[i].x) < best; j++){
+      const d = Math.hypot(pts[j].x-pts[i].x, pts[j].y-pts[i].y);
+      if(d < best) best = d;
+    }
+  }
+  return best;
+}
+
+function gestureApplyFitted(g, transform, ratio, identityRatio){
+  const bounds = spacingBounds();
+  const baseline = gestureOverflowBySeat(g, g.points, bounds);
+  // Compressing keeps everything comfortably on the page, so a bounds-only check
+  // never objects while seats quietly pile onto one another. Guard the gap
+  // between seats too: never crowd them tighter than they already were, and
+  // never closer than touching.
+  const startGap = gestureMinSeatGap(g, g.points);
+  const floorGap = Math.min(startGap, seatRadius()*2);
+  const acceptable = pts =>
+    gestureNoWorse(g, pts, bounds, baseline) &&
+    gestureMinSeatGap(g, pts) >= floorGap - 0.01;
+  const full = transform(g, ratio);
+  if(acceptable(full)) return { points: full, ratio };
+  // Binary-search the furthest the slider can travel without pushing any seat
+  // further off-page. We ease the RATIO back and re-apply the same transform,
+  // rather than clamping individual seats: that keeps every seat's position
+  // relative to its neighbours intact, so nothing bunches up against an edge.
+  let lo = identityRatio, hi = ratio;
+  for(let i=0;i<20;i++){
+    const mid = (lo+hi)/2;
+    if(acceptable(transform(g, mid))) lo = mid; else hi = mid;
+  }
+  // Report the ratio actually achieved, not the one asked for. Recording the
+  // requested figure makes the next gesture measure from a position the chart
+  // never reached, so dragging out and back compounds a little more compression
+  // each time.
+  return { points: transform(g, lo), ratio: lo };
+}
+
+// Writes transformed points back to the seats, then resyncs each row's stored
+// geometry from where its seats actually ended up. That keeps rowRadii and
+// rowWidthBase honest for everything downstream that still reads them (adding a
+// row, toggling a row's shape) even though the sliders no longer drive seats
+// through those formulas.
+function commitSpacingGesture(g, points){
+  points.forEach(p=>{
+    const s = getSeat(p.id);
+    if(s){ s.x = g.centerX + p.lateral; s.y = g.anchorY - p.depth; }
+  });
+  const anchor = podiumAnchorY();
+  for(let i=0;i<chart.rowIndex;i++){
+    const rowSeats = chart.seats.filter(s=>s.row===i && !s.hidden);
+    if(rowSeats.length === 0) continue;
+    // rowRadii carries a different quantity depending on the row's shape: a true
+    // radius from the podium for an arc, but plain depth for a straight row.
+    // Resyncing both as depth silently corrupts every arc, which then throws off
+    // anything that later positions a row relative to it.
+    if(chart.rowShapes[i] === 'arc'){
+      const pod = podiumPoint();
+      chart.rowRadii[i] = rowSeats.reduce((sum,s)=>sum+Math.hypot(s.x-pod.x, s.y-pod.y),0)/rowSeats.length;
+    } else {
+      chart.rowRadii[i] = anchor - (rowSeats.reduce((sum,s)=>sum+s.y,0)/rowSeats.length);
+    }
+    if(chart.rowShapes[i] === 'straight' && rowSeats.length > 1){
+      const xs = rowSeats.map(s=>s.x);
+      chart.rowWidthBase[i] = Math.max(...xs) - Math.min(...xs);
+    }
+  }
 }
 
 function podiumPoint(){
@@ -1868,92 +2234,15 @@ function rowOverflowsCanvas(rowIndex){
          (margin+r)-minY > 0.5 || (maxY+r)-(canvas.height-margin) > 0.5;
 }
 
-// Same check, but horizontal-only -- used by the seat-spacing backoff loop specifically.
-// Seat spacing on a straight row only ever adjusts x (never y), so a row with a
-// pre-existing vertical offset unrelated to spacing (e.g. a soloist seat positioned
-// slightly forward) would otherwise trigger an unresolvable "overflow" every time,
-// since narrowing the row's width can never fix a y-margin violation -- forcing the
-// backoff loop to always collapse to its floor regardless of the requested value.
-function rowOverflowsCanvasX(rowIndex){
-  const margin = 24, r = seatRadius();
-  const seats = chart.seats.filter(s=>s.row===rowIndex && !s.hidden);
-  if(seats.length === 0) return false;
-  let minX=Infinity, maxX=-Infinity;
-  seats.forEach(s=>{
-    minX = Math.min(minX, s.x); maxX = Math.max(maxX, s.x);
-  });
-  return (margin+r)-minX > 0.5 || (maxX+r)-(canvas.width-margin) > 0.5;
-}
-
 function applySeatSpacingToSelection(newValue){
-  if(!seatSpacingCustomSnapshot) captureSeatSpacingSnapshot();
-  const effSel = effectiveSpacingSelection();
-  if(selection.size === 0) chart.seatSpacing = newValue;
-  rowsForSpacing().forEach(rowIndex=>{
-    const rowSeats = chart.seats.filter(s=>s.row===rowIndex && !s.hidden);
-    const allManualOrCustom = rowSeats.length > 0 && rowSeats.every(s=>s.layoutMode==='custom' || s.manuallyMoved);
-    let effective = newValue;
-    let guard = 0;
-    let applied = false;
-    while(guard < 25){
-      if(chart.rowShapes[rowIndex] === 'arc' && chart.rowSagittaBase[rowIndex] !== undefined){
-        reshapeRowArc(rowIndex, chart.rowSagittaBase[rowIndex] * (effective/100), effSel);
-      } else if(chart.rowShapes[rowIndex] === 'straight' && chart.rowWidthBase[rowIndex] !== undefined){
-        reshapeStraightRowWidth(rowIndex, chart.rowWidthBase[rowIndex] * (effective/100), effSel);
-      } else {
-        break; // no valid shape/base for this row -- nothing more to reshape
-      }
-      chart.rowSeatSpacingPct[rowIndex] = effective;
-      applied = true;
-      // No real seat is actually driven by this formula when every seat in the row is
-      // manually-moved/custom -- checking overflow here would only ever reflect stale
-      // positions from whatever value was last applied, not the current target.
-      if(allManualOrCustom) break;
-      const overflowCheck = chart.rowShapes[rowIndex] === 'straight' ? rowOverflowsCanvasX : rowOverflowsCanvas;
-      if(!overflowCheck(rowIndex) || effective <= 60) break;
-      effective = Math.max(60, effective - 4);
-      guard++;
-    }
-    // Selected custom-straight seats aren't touched by the reshape functions above
-    // (deliberately, so they never revert to following the row's native curve) -- scale
-    // them relative to the podium point by the same ratio the spacing changed, so they
-    // still widen/narrow along with the rest of the row.
-    if(applied && seatSpacingCustomSnapshot && seatSpacingCustomSnapshot[rowIndex]){
-      const snap = seatSpacingCustomSnapshot[rowIndex];
-      const ratio = effective / snap.startPct;
-      const isArc = chart.rowShapes[rowIndex] === 'arc';
-      const pod = podiumPoint();
-      const cx = canvas.width/2;
-      snap.seats.forEach(({id, x, y})=>{
-        const s = getSeat(id);
-        if(!s) return;
-        if(isArc){
-          s.x = pod.x + (x - pod.x) * ratio;
-          s.y = pod.y + (y - pod.y) * ratio;
-        } else {
-          // Straight rows only ever widen/narrow horizontally -- y stays exactly where
-          // it was, matching reshapeStraightRowWidth's own behavior for normal seats.
-          s.x = cx + (x - cx) * ratio;
-        }
-      });
-    }
-  });
-  // Freeform chairs have no row of their own, so seat spacing has no natural formula to
-  // apply to them -- they "adopt" the same treatment an arc row's seats would get,
-  // scaling relative to the podium point, without ever changing their base position
-  // (the snapshot below always starts from wherever they actually are).
-  if(seatSpacingFreeformSnapshot){
-    const snap = seatSpacingFreeformSnapshot;
-    const ratio = newValue / snap.startPct;
-    const pod = podiumPoint();
-    snap.seats.forEach(({id, x, y})=>{
-      const s = getSeat(id);
-      if(s){
-        s.x = pod.x + (x - pod.x) * ratio;
-        s.y = pod.y + (y - pod.y) * ratio;
-      }
-    });
-  }
+  if(!spacingGesture) spacingGesture = beginSpacingGesture();
+  const g = spacingGesture;
+  const ratio = newValue / (g.startSeatPct || 100);
+  const res = gestureApplyFitted(g, gestureSeatSpacing, ratio, 1);
+  commitSpacingGesture(g, res.points);
+  const effective = (g.startSeatPct || 100) * res.ratio;
+  if(selection.size === 0) chart.seatSpacing = effective;
+  rowsForSpacing().forEach(i=>{ chart.rowSeatSpacingPct[i] = effective; });
 }
 
 // Scales a straight row's total width around its own center, spreading (or tightening)
@@ -2265,52 +2554,12 @@ function applyRowSpacing(newValue){
 // selected row's own gap from the row immediately ahead of it is scaled; rows with no
 // selected seat (including ones in between) are left exactly where they are.
 function applyRowSpacingToSelection(newValue){
-  if(!rowSpacingCustomSnapshot && !rowSpacingFreeformSnapshot) captureRowSpacingSnapshot();
-  if(selection.size === 0) chart.rowSpacing = newValue;
-  dedupeRowRadii();
-  const rows = [...rowsForSpacing()].sort((a,b)=>a-b);
-  const effSel = effectiveSpacingSelection();
-  rows.forEach(i=>{
-    if(i === 0) return; // row 0 is the anchor -- nothing ahead of it to scale a gap from
-    const gapBase = chart.rowGapBase[i] || 0;
-    const prevRadius = chart.rowRadii[i-1];
-    if(prevRadius === undefined) return;
-    let effective = newValue;
-    let guard = 0;
-    let done = false;
-    while(!done && guard < 25){
-      chart.rowRadii[i] = clampedRowRadius(prevRadius, gapBase*(effective/100));
-      rebuildArcRow(i, undefined, effSel);
-      rebuildStraightRow(i, undefined, effSel);
-      if(!rowOverflowsCanvas(i) || effective <= 60){ done = true; }
-      else { effective = Math.max(60, effective - 4); guard++; }
-    }
-    // Selected custom-straight seats aren't touched by the row-shape formulas above
-    // (deliberately, so they never revert to following the row's native curve) -- shift
-    // them by the same amount this row's own depth changed, so they still move with it.
-    if(rowSpacingCustomSnapshot && rowSpacingCustomSnapshot[i]){
-      const snap = rowSpacingCustomSnapshot[i];
-      const delta = chart.rowRadii[i] - snap.startRadius;
-      snap.seats.forEach(({id, y})=>{
-        const s = getSeat(id);
-        if(s) s.y = y + delta;
-      });
-    }
-  });
-  // Freeform chairs have no row of their own -- they "adopt" the behavior a row's seats
-  // would get, scaling their depth-from-podium by the same ratio the row-spacing factor
-  // changes, without ever moving their base (starting) position.
-  if(rowSpacingFreeformSnapshot){
-    const snap = rowSpacingFreeformSnapshot;
-    const ratio = newValue / snap.startPct;
-    snap.seats.forEach(({id, x, y})=>{
-      const s = getSeat(id);
-      if(s){
-        s.x = snap.pod.x + (x - snap.pod.x) * ratio;
-        s.y = snap.pod.y + (y - snap.pod.y) * ratio;
-      }
-    });
-  }
+  if(!spacingGesture) spacingGesture = beginSpacingGesture();
+  const g = spacingGesture;
+  const ratio = newValue / (g.startRowPct || 100);
+  const res = gestureApplyFitted(g, gestureRowSpacing, ratio, 1);
+  commitSpacingGesture(g, res.points);
+  if(selection.size === 0) chart.rowSpacing = (g.startRowPct || 100) * res.ratio;
 }
 
 // Stage spacing adjusts the shared anchor's y-position (i.e. the y-axis of every row's
@@ -2355,24 +2604,15 @@ function applyStageSpacing(newValue){
 // Same idea, but only the rows represented in the current selection are shifted to the
 // new anchor position; every other row keeps using the persisted global anchor.
 function applyStageSpacingToSelection(newValue){
-  if(!freeformStageSnapshot) captureStageSpacingSnapshot();
-  if(selection.size === 0) chart.stageSpacing = newValue;
-  dedupeRowRadii();
-  const rawAnchor = anchorYForStageSpacing(newValue);
-  const rows = rowsForSpacing();
-  const anchor = clampAnchorForRows(rawAnchor, [...rows]);
-  const effSel = effectiveSpacingSelection();
-  rows.forEach(i=>{
-    rebuildArcRow(i, anchor, effSel);
-    rebuildStraightRow(i, anchor, effSel);
-  });
-  if(freeformStageSnapshot){
-    const delta = anchor - freeformStageSnapshot.anchor;
-    freeformStageSnapshot.seats.forEach(({id, y})=>{
-      const s = getSeat(id);
-      if(s) s.y = y + delta;
-    });
-  }
+  if(!spacingGesture) spacingGesture = beginSpacingGesture();
+  const g = spacingGesture;
+  // Stage spacing slides the whole formation; the shift is however far the
+  // podium anchor itself moves between the gesture's start value and the new one.
+  const delta = anchorYForStageSpacing(g.startStagePct) - anchorYForStageSpacing(newValue);
+  const res = gestureApplyFitted(g, (gg,r)=>gestureStage(gg, delta*r), 1, 0);
+  commitSpacingGesture(g, res.points);
+  if(selection.size === 0)
+    chart.stageSpacing = g.startStagePct + (newValue - g.startStagePct) * res.ratio;
 }
 
 function getSeatBBox(){
@@ -2391,6 +2631,45 @@ function getSeatBBox(){
 // Used only right after a new row is added: if THAT row alone doesn't fit the visible
 // canvas, shrink only its own radius/width until it does -- existing rows and the
 // global seat/row spacing settings are never touched.
+// Reports whether a freshly placed row physically collides with anything already
+// on the stage, or has been pushed outside the visible area.
+//
+// This is a direct seat-to-seat proximity test rather than a comparison of row
+// depths or bounding boxes. Concentric arc rows legitimately NEST -- an outer
+// row's end seats sit beside the row in front of it, not behind it -- so any
+// test based on vertical extent wrongly reads a correct layout as overlapping
+// and shoves the new row far too deep.
+function newRowPlacementProblem(rowN){
+  const newSeats = chart.seats.filter(s=>s.row===rowN && !s.hidden);
+  if(newSeats.length === 0) return null;
+  const r = seatRadius();
+  for(const s of newSeats){
+    if(s.x - r < 0 || s.x + r > canvas.width || s.y - r < 0 || s.y + r > canvas.height){
+      return 'no room left on the stage for another row';
+    }
+  }
+  const tooClose = r * 2.05;
+  // The row must not be crushed into itself. Comparing only against the OTHER
+  // rows let a row that had been squeezed into a fraction of its width pass,
+  // with its own chairs sitting on top of one another.
+  const ordered = newSeats.slice().sort((a,b)=>a.x-b.x);
+  for(let i=1;i<ordered.length;i++){
+    if(Math.hypot(ordered[i].x-ordered[i-1].x, ordered[i].y-ordered[i-1].y) < tooClose){
+      return 'not enough width left for the chairs in this row';
+    }
+  }
+  const others = chart.seats.filter(s=>s.row!==rowN && !s.hidden);
+  for(const a of newSeats){
+    for(const b of others){
+      if(Math.hypot(a.x-b.x, a.y-b.y) < tooClose){
+        return 'not enough room between the existing rows';
+      }
+    }
+  }
+  return null;
+}
+
+
 function fitNewRowToCanvas(rowN){
   const margin = 24;
   const r = seatRadius();
@@ -2407,8 +2686,14 @@ function fitNewRowToCanvas(rowN){
     const overRight = (maxX+r) - (canvas.width-margin);
     const overTop = (margin+r) - minY;
     const overBottom = (maxY+r) - (canvas.height-margin);
-    const overflowing = overLeft > 0.5 || overRight > 0.5 || overTop > 0.5 || overBottom > 0.5;
-    if(!overflowing) return;
+    const overflowsSideways = overLeft > 0.5 || overRight > 0.5;
+    const overflowsVertically = overTop > 0.5 || overBottom > 0.5;
+    if(!overflowsSideways && !overflowsVertically) return;
+    // A straight row's depth is fixed by its own geometry, so narrowing it can
+    // never resolve a top or bottom overflow -- the loop would simply keep
+    // narrowing until the row collapsed into a heap of overlapping chairs.
+    // Leave it be and let the placement check decline the row instead.
+    if(chart.rowShapes[rowN] === 'straight' && !overflowsSideways) return;
 
     if(chart.rowShapes[rowN] === 'arc'){
       const current = chart.rowRadii[rowN];
@@ -3993,13 +4278,9 @@ function setSelection(ids){
   if(selectedId) lastInteractedSeatId = selectedId;
   podiumSelected = false;
   selectedTextBoxId = null;
-  // These snapshots are only valid for the selection they were captured under -- any
-  // selection change invalidates them, forcing a fresh capture on the next drag.
-  seatSpacingCustomSnapshot = null;
-  seatSpacingFreeformSnapshot = null;
-  rowSpacingCustomSnapshot = null;
-  rowSpacingFreeformSnapshot = null;
-  freeformStageSnapshot = null;
+  // A frozen gesture snapshot is only valid for the selection it was captured
+  // under, so any selection change discards it and forces a fresh capture.
+  spacingGesture = null;
   refreshSelectionUI();
   render();
 }
@@ -4209,12 +4490,8 @@ function setSpacingSlidersScope(scoped){
 // fresh from a snapshot taken the moment the group was selected, so the two sliders
 // compose correctly no matter which one is touched first.
 let customGroupSnapshot = null;
-let freeformStageSnapshot = null; // { anchor, seats:[{id,y}] } -- captured at the start of a stage-spacing drag, so freeform chairs (no formal row) and custom-straight seats shift by the same amount the rest of the formation moves
-let rowSpacingCustomSnapshot = null; // { [rowIndex]: {startRadius, seats:[{id,y}]} } -- lets selected custom-straight seats shift with their row's own depth change during a row-spacing drag
-let rowSpacingFreeformSnapshot = null; // {startPct, pod:{x,y}, seats:[{id,x,y}]} -- freeform chairs scale their depth-from-podium by the same ratio the row-spacing factor changes, as if they belonged to a row
+let spacingGesture = null; // the single frozen snapshot for an in-progress spacing drag (see UNIFIED SPACING MODEL)
 let lastRowSpacingPct = 100; // the slider's value as of the last processed input -- NOT read from the DOM directly, since by the time an input handler runs the slider's .value already reflects the NEW target, not the value being dragged FROM
-let seatSpacingCustomSnapshot = null; // { [rowIndex]: {startPct, seats:[{id,x,y}]} } -- lets selected custom-straight seats scale relative to the podium point during a seat-spacing drag
-let seatSpacingFreeformSnapshot = null; // {startPct, seats:[{id,x,y}]} -- freeform chairs "adopt" the same podium-relative scaling an arc row's seats get, since they have no row of their own
 let customGroupSeatPct = 100;
 let customGroupRowPct = 100;
 
@@ -5237,65 +5514,45 @@ document.getElementById('rosterTextSize').oninput = e=>{
   }
   render();
 };
-function captureSeatSpacingSnapshot(){
-  const effSel = effectiveSpacingSelection();
-  const snapshot = {};
-  rowsForSpacing().forEach(rowIndex=>{
-    const customSeats = chart.seats.filter(s=>s.row===rowIndex && effSel.has(s.id) && (s.layoutMode==='custom' || s.manuallyMoved));
-    if(customSeats.length > 0){
-      snapshot[rowIndex] = {
-        startPct: chart.rowSeatSpacingPct[rowIndex] !== undefined ? chart.rowSeatSpacingPct[rowIndex] : (chart.seatSpacing || 100),
-        seats: customSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
-      };
-    }
-  });
-  seatSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
-
-  const freeformSeats = chart.seats.filter(s=>s.row===-1 && !s.hidden && effSel.has(s.id));
-  seatSpacingFreeformSnapshot = freeformSeats.length > 0 ? {
-    startPct: chart.seatSpacing || 100,
-    seats: freeformSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
-  } : null;
-}
-document.getElementById('seatSpacing').addEventListener('mousedown', ()=>{
+// All three spacing sliders share one lifecycle: freeze a snapshot when the
+// drag starts, transform from that frozen snapshot on every move (so repeated
+// movement never compounds), and release it when the drag ends.
+function beginSliderDrag(){
   pushHistory();
-  captureSeatSpacingSnapshot();
+  spacingGesture = beginSpacingGesture();
+}
+function endSliderDrag(){
+  spacingGesture = null;
+  // Snap each slider to the value that was actually applied. If the stage ran out
+  // of room the thumb springs back to the limit, which both tells the person what
+  // happened and keeps the next drag measuring from a real starting point.
+  if(selection.size === 0){
+    // Store the rounded figure too, so the control and the chart hold exactly the
+    // same number. Leaving the stored value fractional while the thumb shows a
+    // whole number makes the next drag measure from a slightly different place.
+    chart.seatSpacing  = Math.round(chart.seatSpacing  || 100);
+    chart.rowSpacing   = Math.round(chart.rowSpacing   || 100);
+    chart.stageSpacing = Math.round(chart.stageSpacing || 100);
+    document.getElementById('seatSpacing').value = chart.seatSpacing;
+    document.getElementById('rowSpacingSlider').value = chart.rowSpacing;
+    document.getElementById('stageSpacingSlider').value = chart.stageSpacing;
+    lastRowSpacingPct = chart.rowSpacing;
+  }
+}
+
+['seatSpacing','rowSpacingSlider','stageSpacingSlider'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener('mousedown', beginSliderDrag);
+  el.addEventListener('touchstart', beginSliderDrag);
+  el.addEventListener('change', endSliderDrag);
 });
-document.getElementById('seatSpacing').addEventListener('change', ()=>{ seatSpacingCustomSnapshot = null; seatSpacingFreeformSnapshot = null; });
+
 document.getElementById('seatSpacing').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupSeatPct = val; recomputeCustomGroup(); }
   else applySeatSpacingToSelection(val);
   render();
 };
-function captureRowSpacingSnapshot(){
-  const effSel = effectiveSpacingSelection();
-  const snapshot = {};
-  const rowsSet = new Set(rowsForSpacing());
-  const startPct = lastRowSpacingPct;
-  rowsSet.forEach(rowIndex=>{
-    const customSeats = chart.seats.filter(s=>s.row===rowIndex && effSel.has(s.id) && (s.layoutMode==='custom' || s.manuallyMoved));
-    if(customSeats.length > 0){
-      snapshot[rowIndex] = {
-        startRadius: computeFormulaRowRadius(rowIndex, startPct, rowsSet),
-        seats: customSeats.map(s=>({ id: s.id, y: s.y })),
-      };
-    }
-  });
-  rowSpacingCustomSnapshot = Object.keys(snapshot).length > 0 ? snapshot : null;
-
-  const freeformSeats = chart.seats.filter(s=>s.row===-1 && !s.hidden && effSel.has(s.id));
-  rowSpacingFreeformSnapshot = freeformSeats.length > 0 ? {
-    startPct,
-    pod: podiumPoint(),
-    seats: freeformSeats.map(s=>({ id: s.id, x: s.x, y: s.y })),
-  } : null;
-}
-document.getElementById('rowSpacingSlider').addEventListener('mousedown', ()=>{
-  pushHistory();
-  captureRowSpacingSnapshot();
-});
-document.getElementById('rowSpacingSlider').addEventListener('change', ()=>{ rowSpacingCustomSnapshot = null; rowSpacingFreeformSnapshot = null; });
 document.getElementById('rowSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
@@ -5303,20 +5560,6 @@ document.getElementById('rowSpacingSlider').oninput = e=>{
   lastRowSpacingPct = val;
   render();
 };
-function captureStageSpacingSnapshot(){
-  const effSel = effectiveSpacingSelection();
-  const shiftSelected = [...effSel].map(id=>getSeat(id)).filter(s=>s && (s.row===-1 || s.layoutMode==='custom' || s.manuallyMoved));
-  const rowsForAnchor = [...rowsForSpacing()];
-  freeformStageSnapshot = shiftSelected.length > 0 ? {
-    anchor: clampAnchorForRows(anchorYForStageSpacing(chart.stageSpacing), rowsForAnchor),
-    seats: shiftSelected.map(s=>({ id: s.id, y: s.y })),
-  } : null;
-}
-document.getElementById('stageSpacingSlider').addEventListener('mousedown', ()=>{
-  pushHistory();
-  captureStageSpacingSnapshot();
-});
-document.getElementById('stageSpacingSlider').addEventListener('change', ()=>{ freeformStageSnapshot = null; });
 document.getElementById('stageSpacingSlider').oninput = e=>{
   const val = parseInt(e.target.value);
   if(customGroupSnapshot){ customGroupRowPct = val; recomputeCustomGroup(); }
