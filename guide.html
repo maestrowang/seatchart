@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<!--
+  Seating Chart Studio -- User Guide
+
+  Copyright (c) 2026 maestrowang. All rights reserved.
+
+  This code is for review and educational purposes only. No part of this
+  repository may be copied, distributed, or modified without explicit written
+  permission from the author.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seating Chart Studio — User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F3E9;
+    --paper-dim:#EFE9D8;
+    --ink:#242019;
+    --ink-soft:#5B5548;
+    --stage:#20221F;
+    --brass:#C08A3E;
+    --brass-soft:rgba(192,138,62,0.16);
+    --wood:#8B5E3C;
+    --line:#DCD3BC;
+    --danger:#A6412F;
+    --radius:10px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ transition:none !important; animation:none !important; }
+  }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 28px; }
+
+  /* ---------- masthead ---------- */
+  .masthead{
+    background:var(--stage);
+    color:var(--paper);
+    padding:64px 0 0;
+    position:relative;
+    overflow:hidden;
+  }
+  .masthead::after{
+    content:"";
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg,
+      rgba(247,243,233,0.05) 0 1px, transparent 1px 64px);
+    pointer-events:none;
+  }
+  .masthead .wrap{ position:relative; z-index:1; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--brass);
+    margin:0 0 14px;
+  }
+  .masthead h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(38px,6vw,68px);
+    line-height:1.02;
+    margin:0 0 18px;
+    letter-spacing:-0.015em;
+  }
+  .masthead p{
+    font-size:clamp(16px,2vw,19px);
+    color:rgba(247,243,233,0.72);
+    max-width:44ch;
+    margin:0 0 40px;
+  }
+  .stage-figure{
+    display:block; width:100%; max-width:520px; margin:0 auto;
+    transform:translateY(1px);
+  }
+
+  /* ---------- contents ---------- */
+  .contents{
+    background:var(--paper-dim);
+    border-bottom:1px solid var(--line);
+    padding:30px 0;
+  }
+  .contents h2{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--ink-soft); margin:0 0 16px; font-weight:500;
+  }
+  .toc{
+    list-style:none; margin:0; padding:0;
+    display:grid; gap:2px 30px;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  }
+  .toc a{
+    display:block; padding:5px 0;
+    color:var(--ink); text-decoration:none;
+    border-bottom:1px solid transparent;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  .toc a:hover, .toc a:focus-visible{
+    color:var(--wood); border-bottom-color:var(--brass);
+  }
+  .toc .num{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px; color:var(--brass); margin-right:9px;
+  }
+
+  /* ---------- sections ---------- */
+  main{ padding:8px 0 90px; }
+  section{ padding:44px 0 8px; border-bottom:1px solid var(--line); }
+  section:last-of-type{ border-bottom:none; }
+  section > .wrap > h2{
+    font-family:'Fraunces',serif;
+    font-weight:600; font-size:clamp(25px,3.4vw,34px);
+    margin:0 0 6px; letter-spacing:-0.01em;
+  }
+  .sec-num{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px; letter-spacing:.16em;
+    color:var(--brass); display:block; margin-bottom:8px;
+  }
+  .lede{ color:var(--ink-soft); max-width:66ch; margin:0 0 26px; font-size:17px; }
+  h3{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:16.5px;
+    margin:30px 0 8px;
+  }
+  p, li{ max-width:72ch; }
+  ul, ol{ padding-left:20px; }
+  li{ margin:5px 0; }
+  strong{ font-weight:600; }
+
+  /* ---------- ui reference chips ---------- */
+  .ui{
+    font-family:'Inter',sans-serif; font-weight:500; font-size:.93em;
+    background:var(--brass-soft); color:var(--wood);
+    padding:1px 7px; border-radius:5px; white-space:nowrap;
+  }
+  kbd{
+    font-family:'JetBrains Mono',monospace; font-size:.84em;
+    background:var(--paper-dim); color:var(--ink);
+    border:1px solid var(--line); border-bottom-width:2px;
+    border-radius:5px; padding:2px 7px; white-space:nowrap;
+  }
+
+  /* ---------- steps ---------- */
+  .steps{ list-style:none; padding:0; margin:0 0 8px; counter-reset:step; }
+  .steps li{
+    counter-increment:step; position:relative;
+    padding-left:44px; margin:0 0 16px; max-width:70ch;
+  }
+  .steps li::before{
+    content:counter(step,decimal-leading-zero);
+    position:absolute; left:0; top:1px;
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:var(--brass);
+    border:1px solid var(--line); border-radius:50%;
+    width:28px; height:28px; display:grid; place-items:center;
+    background:var(--paper);
+  }
+
+  /* ---------- callout ---------- */
+  .note{
+    border-left:3px solid var(--brass);
+    background:rgba(192,138,62,0.07);
+    padding:15px 20px; margin:24px 0; border-radius:0 var(--radius) var(--radius) 0;
+  }
+  .note p{ margin:0; }
+  .note .tag{
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--wood);
+    display:block; margin-bottom:5px;
+  }
+
+  /* ---------- tables ---------- */
+  table{ border-collapse:collapse; width:100%; max-width:760px; margin:18px 0 8px; }
+  th, td{ text-align:left; padding:9px 14px 9px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{
+    font-family:'JetBrains Mono',monospace; font-weight:500;
+    font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  td:first-child{ white-space:nowrap; padding-right:26px; }
+
+  /* ---------- panel-map ---------- */
+  .panelmap{
+    display:grid; gap:0; max-width:420px; margin:18px 0 6px;
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  }
+  .panelmap div{
+    padding:9px 15px; border-bottom:1px solid var(--line);
+    background:var(--paper); font-size:14.5px;
+    display:flex; justify-content:space-between; gap:14px; align-items:baseline;
+  }
+  .panelmap div:last-child{ border-bottom:none; }
+  .panelmap span{ color:var(--ink-soft); font-size:13px; text-align:right; }
+
+  /* ---------- footer ---------- */
+  footer{
+    background:var(--stage); color:rgba(247,243,233,0.55);
+    padding:38px 0; font-size:13.5px;
+  }
+  footer p{ margin:0 0 6px; max-width:70ch; }
+  footer strong{ color:rgba(247,243,233,0.8); font-weight:500; }
+
+  a{ color:var(--wood); }
+  :focus-visible{ outline:2px solid var(--brass); outline-offset:2px; border-radius:3px; }
+
+  @media (max-width:640px){
+    .wrap{ padding:0 20px; }
+    .masthead{ padding-top:44px; }
+    td:first-child{ white-space:normal; }
+  }
+
+  /* ---------- print ---------- */
+  @media print{
+    body{ background:#fff; font-size:11.5pt; }
+    .masthead{ background:#fff; color:var(--ink); padding:0 0 12px; }
+    .masthead::after{ display:none; }
+    .masthead p{ color:var(--ink-soft); }
+    .eyebrow, .sec-num{ color:var(--wood); }
+    .contents{ background:#fff; }
+    .stage-figure{ max-width:330px; }
+    section{ page-break-inside:avoid; padding-top:22px; }
+    footer{ background:#fff; color:var(--ink-soft); }
+    a{ text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">User Guide</p>
+    <h1>Seating&nbsp;Chart<br>Studio</h1>
+    <p>Build seating charts for orchestra, band, and any ensemble — right in your browser. Nothing to install, no account, and your charts never leave your computer.</p>
+    <svg class="stage-figure" viewBox="0 0 520 210" role="img" aria-label="A seating chart: three curved rows of chairs arranged around a conductor's podium.">
+      <defs>
+        <g id="ch">
+          <circle r="8.5" fill="#EFE9D8" stroke="rgba(247,243,233,0.30)" stroke-width="1"/>
+        </g>
+      </defs>
+      <!-- rows, drawn as arcs around the podium at (260, 196) -->
+      <g>
+        <!-- row 3 -->
+        <g fill="none" stroke="rgba(247,243,233,0.09)" stroke-width="1">
+          <path d="M 80 150 A 185 185 0 0 1 440 150"/>
+          <path d="M 108 176 A 140 140 0 0 1 412 176"/>
+          <path d="M 140 194 A 95 95 0 0 1 380 194"/>
+        </g>
+        <g>
+          <use href="#ch" x="84"  y="150"/><use href="#ch" x="130" y="112"/>
+          <use href="#ch" x="188" y="88"/> <use href="#ch" x="260" y="80"/>
+          <use href="#ch" x="332" y="88"/> <use href="#ch" x="390" y="112"/>
+          <use href="#ch" x="436" y="150"/>
+        </g>
+        <g>
+          <use href="#ch" x="116" y="172"/><use href="#ch" x="164" y="140"/>
+          <use href="#ch" x="222" y="122"/><use href="#ch" x="298" y="122"/>
+          <use href="#ch" x="356" y="140"/><use href="#ch" x="404" y="172"/>
+        </g>
+        <g>
+          <use href="#ch" x="152" y="190"/><use href="#ch" x="206" y="166"/>
+          <use href="#ch" x="260" y="158"/><use href="#ch" x="314" y="166"/>
+          <use href="#ch" x="368" y="190"/>
+        </g>
+      </g>
+      <!-- podium -->
+      <rect x="242" y="192" width="36" height="13" rx="3" fill="#C08A3E" opacity="0.9"/>
+    </svg>
+  </div>
+</header>
+
+<nav class="contents">
+  <div class="wrap">
+    <h2>Contents</h2>
+    <ul class="toc">
+      <li><a href="#start"><span class="num">01</span>Your first chart</a></li>
+      <li><a href="#rows"><span class="num">02</span>Building rows</a></li>
+      <li><a href="#seats"><span class="num">03</span>Editing seats</a></li>
+      <li><a href="#spacing"><span class="num">04</span>Spacing &amp; size</a></li>
+      <li><a href="#tools"><span class="num">05</span>Extra tools</a></li>
+      <li><a href="#roster"><span class="num">06</span>Player names</a></li>
+      <li><a href="#groups"><span class="num">07</span>Groups</a></li>
+      <li><a href="#view"><span class="num">08</span>What's shown</a></li>
+      <li><a href="#save"><span class="num">09</span>Saving &amp; sharing</a></li>
+      <li><a href="#export"><span class="num">10</span>Printing &amp; export</a></li>
+      <li><a href="#keys"><span class="num">11</span>Keyboard shortcuts</a></li>
+      <li><a href="#help"><span class="num">12</span>Troubleshoot</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+<section id="start">
+  <div class="wrap">
+    <span class="sec-num">01</span>
+    <h2>Your first chart</h2>
+    <p class="lede">Everything lives in the panel on the left. Work down it in order and you'll have a finished chart in a few minutes.</p>
+    <ol class="steps">
+      <li>Under <span class="ui">Build Rows</span>, set how many chairs you want, pick <strong>Curved</strong> or <strong>Straight</strong>, and click <span class="ui">+ Add Row</span>. Repeat for each row.</li>
+      <li>Click any chair to select it, then choose its instrument. The chair takes on that section's color.</li>
+      <li>Open <span class="ui">Roster</span> at the top right and paste your player names in.</li>
+      <li>Use <span class="ui">Print Chart</span> or <span class="ui">Download PDF</span> when you're happy with it.</li>
+    </ol>
+    <h3>How the panel is organized</h3>
+    <p>Click any section title to fold it away. <span class="ui">Collapse All</span> and <span class="ui">Expand All</span> sit at the bottom.</p>
+    <div class="panelmap">
+      <div>Build Rows <span>add and remove rows</span></div>
+      <div>Selection <span>edit whatever you've clicked</span></div>
+      <div>Tools <span>spacing sliders and extras</span></div>
+      <div>Groups <span>select a whole section at once</span></div>
+      <div>View <span>what appears on the chart</span></div>
+      <div>Templates <span>start from a ready-made chart</span></div>
+      <div>Save &amp; Load <span>keep and reopen your work</span></div>
+      <div>Export <span>images, PDF, printing</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="rows">
+  <div class="wrap">
+    <span class="sec-num">02</span>
+    <h2>Building rows</h2>
+    <p class="lede">Each row you add sits behind the last. Curved rows are shaped so their end chairs line up with the rows in front — the usual look for orchestral seating.</p>
+    <ul>
+      <li><span class="ui">Undo Row</span> removes the row you added most recently.</li>
+      <li><span class="ui">Reset Seating Chart</span> clears everything and starts fresh.</li>
+    </ul>
+    <h3>When a row won't go in</h3>
+    <p>The stage is a fixed size, so there's a real limit to how much fits. If a new row would overlap the chairs already there or run off the edge, the app tells you instead of adding a squashed or half-hidden row.</p>
+    <p>To make room, try any of these, then add the row again:</p>
+    <ul>
+      <li>Lower <strong>Seat spacing</strong> to narrow the rows.</li>
+      <li>Lower <strong>Row spacing</strong> to close the gaps between rows.</li>
+      <li>Move <strong>Stage spacing</strong> to shift everyone forward.</li>
+    </ul>
+    <div class="note">
+      <span class="tag">Worth knowing</span>
+      <p>Past a certain point the stage really is full, and no amount of adjusting will fit another row.</p>
+    </div>
+  </div>
+</section>
+
+<section id="seats">
+  <div class="wrap">
+    <span class="sec-num">03</span>
+    <h2>Editing seats</h2>
+    <p class="lede">The <span class="ui">Selection</span> panel changes to match whatever you've clicked, and opens on its own when you select something.</p>
+    <table>
+      <tr><th>To do this</th><th>Do that</th></tr>
+      <tr><td>Select one chair</td><td>Click it</td></tr>
+      <tr><td>Select several</td><td>Drag a box across empty stage</td></tr>
+      <tr><td>Add or remove one</td><td><kbd>Shift</kbd> + click</td></tr>
+      <tr><td>Move a chair</td><td>Drag it anywhere you like</td></tr>
+      <tr><td>Nudge precisely</td><td>Arrow keys</td></tr>
+      <tr><td>Rename on the chart</td><td>Double-click the chair</td></tr>
+    </table>
+    <h3>One chair selected</h3>
+    <p>Set its instrument, its label, and its color. You can give it a music stand, hide it (handy for a partial row), or delete it. <span class="ui">Reset</span> turns it back into a plain unassigned chair.</p>
+    <h3>Several chairs selected</h3>
+    <p>The panel switches to bulk controls — assign one instrument to all of them, add stands, hide or show them, or delete them together. You can also straighten a run of chairs inside a curved row, which is useful for a piano, percussion, or a soloist out front.</p>
+    <h3>The podium</h3>
+    <p>Click the podium to rename it, change its color, or give it a music stand or conductor's stand. <span class="ui">Disable Podium</span> hides it completely.</p>
+  </div>
+</section>
+
+<section id="spacing">
+  <div class="wrap">
+    <span class="sec-num">04</span>
+    <h2>Spacing &amp; size</h2>
+    <p class="lede">Four sliders sit under <span class="ui">Tools</span>. What they affect depends on whether anything is selected.</p>
+    <table>
+      <tr><th>Nothing selected</th><th>Chairs selected</th></tr>
+      <tr><td>Changes the whole chart</td><td>Changes only what you've selected</td></tr>
+    </table>
+    <table>
+      <tr><th>Slider</th><th>What it does</th></tr>
+      <tr><td><strong>Seat size</strong></td><td>How big the chairs are drawn.</td></tr>
+      <tr><td><strong>Seat spacing</strong></td><td>How far apart chairs sit within a row. On a curved row they spread along the curve, so the ends open up as much as the middle.</td></tr>
+      <tr><td><strong>Row spacing</strong></td><td>How far apart the rows sit from each other.</td></tr>
+      <tr><td><strong>Stage spacing</strong></td><td>Slides everyone toward or away from the audience.</td></tr>
+    </table>
+    <p>Everything moves from where it currently sits — including chairs you've dragged by hand and loose chairs that don't belong to a row. They travel with the rows around them rather than being left behind.</p>
+    <div class="note">
+      <span class="tag">If a slider stops</span>
+      <p>The sliders stop when the chart reaches the edge of the visible area, or when chairs would start to overlap. Drag further and the handle springs back to the furthest setting that actually worked.</p>
+    </div>
+  </div>
+</section>
+
+<section id="tools">
+  <div class="wrap">
+    <span class="sec-num">05</span>
+    <h2>Extra tools</h2>
+    <p class="lede">Three tools sit above the sliders. Press <kbd>Esc</kbd> to leave any of them.</p>
+    <h3>Freeform Chair</h3>
+    <p>Click anywhere to drop a chair that belongs to no row — good for a soloist, a piano bench, or anything off to one side.</p>
+    <h3>Link Stand Partners</h3>
+    <p>Click two chairs to have them share a music stand. Click the same pair again to unlink them. If you later delete one of a pair, the other keeps a stand of its own.</p>
+    <h3>Text Box</h3>
+    <p>Click anywhere to place a note on the chart. Double-click it to edit right there, and press <kbd>Enter</kbd> for a new line. Drag it to move it.</p>
+  </div>
+</section>
+
+<section id="roster">
+  <div class="wrap">
+    <span class="sec-num">06</span>
+    <h2>Player names</h2>
+    <p class="lede">The <span class="ui">Roster</span> button sits at the top right. Names attach to chairs in order — first name to the first chair, and so on down the section.</p>
+    <ol class="steps">
+      <li>Open the roster and choose a section from the dropdown.</li>
+      <li>Click <span class="ui">Paste / Edit Names</span> and paste your list, one name per line. Pasting a column straight out of a spreadsheet works.</li>
+      <li>Names appear on the chart straight away.</li>
+    </ol>
+    <p>Ordering follows the usual convention: curved rows fill from the outside in, straight rows from the center out.</p>
+    <p>You can change that per section under <span class="ui">View</span> → <strong>Show seat rank numbers</strong>:</p>
+    <table>
+      <tr><td><strong>Standard</strong></td><td>Fills row by row, front to back — the default.</td></tr>
+      <tr><td><strong>Outer seat priority</strong></td><td>Fills the outer chairs of every row first, then comes back for the inner ones. Useful when the strongest players sit on the outside of each stand.</td></tr>
+      <tr><td><strong>Invert ranking</strong></td><td>Reverses whichever order you've chosen, so the last chair becomes first.</td></tr>
+      <tr><td><strong>Hide rank numbers</strong></td><td>Keeps the ordering but takes the badges off the chart for that section.</td></tr>
+    </table>
+    <p>Changing any of these re-seats that section's names straight away, so you can try one and see the result immediately.</p>
+    <h3>Also worth trying</h3>
+    <ul>
+      <li>Drag names in the list to reorder them.</li>
+      <li>Double-click a name on the chart to fix a typo in place.</li>
+      <li><span class="ui">Shuffle</span> reassigns a section at random. Tick <strong>Preserve stand partners</strong> to keep stand-sharing pairs together.</li>
+      <li>Names past the number of chairs available are flagged as unassigned.</li>
+      <li><strong>Roster text size</strong> scales the names up or down.</li>
+    </ul>
+    <div class="note">
+      <span class="tag">Shuffling is safe</span>
+      <p>Shuffling never touches your real roster order. <span class="ui">Revert to Original</span> always brings it back, and you can shuffle over and over without reverting first.</p>
+    </div>
+    <h3>Charts without instruments</h3>
+    <p>You don't need to assign instruments to use names. If your chairs have no instrument, the roster groups them by row instead — Row 1, Row 2, and so on — filled left to right.</p>
+  </div>
+</section>
+
+<section id="groups">
+  <div class="wrap">
+    <span class="sec-num">07</span>
+    <h2>Groups</h2>
+    <p class="lede">Groups lists every instrument section on your chart with a chair count, so you can select a whole section in one click.</p>
+    <p>You can also select any set of chairs and use <span class="ui">Save Selection as Group…</span> to name it and keep it for later — useful for something you re-select often, like "front stands" or "everyone on risers".</p>
+  </div>
+</section>
+
+<section id="view">
+  <div class="wrap">
+    <span class="sec-num">08</span>
+    <h2>What's shown</h2>
+    <p class="lede">The <span class="ui">View</span> section controls what appears on the chart. All of it is display only — turning something off never deletes it.</p>
+    <table>
+      <tr><td><strong>Seat rank numbers</strong></td><td>Small numbered badges, with per-section control over ordering.</td></tr>
+      <tr><td><strong>Seat labels</strong></td><td>Instrument abbreviations on each chair.</td></tr>
+      <tr><td><strong>Roster names</strong></td><td>Player names on each chair.</td></tr>
+      <tr><td><strong>Music stands</strong></td><td>Draws the stands. Links are kept either way.</td></tr>
+      <tr><td><strong>Section legend</strong></td><td>The color key.</td></tr>
+      <tr><td><strong>Flip</strong></td><td>Turns the chart around to the performer's point of view.</td></tr>
+      <tr><td><strong>Notes</strong></td><td>Free text printed under the chart, e.g. "Concert attire: black &amp; white".</td></tr>
+    </table>
+    <p>The chart title is editable directly at the top of the page.</p>
+  </div>
+</section>
+
+<section id="save">
+  <div class="wrap">
+    <span class="sec-num">09</span>
+    <h2>Saving &amp; sharing</h2>
+    <p class="lede">There are two ways to keep a chart, and the difference matters.</p>
+    <h3>Saved charts</h3>
+    <p>These live inside this browser on this computer. They're quick, but they won't follow you to another machine — and clearing your browsing data can remove them.</p>
+    <h3>Chart files</h3>
+    <p><span class="ui">Download Chart File</span> saves your chart as a file on your computer. <span class="ui">Upload Chart File…</span> opens one back up.</p>
+    <p>Use chart files to move work between computers, send a chart to a colleague, or keep a backup you're confident in.</p>
+    <div class="note">
+      <span class="tag">Recommended</span>
+      <p>For anything you'd be sorry to lose, download a chart file. It's the only copy that exists outside this browser.</p>
+    </div>
+    <h3>Templates</h3>
+    <p><span class="ui">Templates</span> starts you from a ready-made chart. Loading one only affects your own copy — change it as freely as you like. Click <span class="ui">Refresh List</span> to check for new ones.</p>
+  </div>
+</section>
+
+<section id="export">
+  <div class="wrap">
+    <span class="sec-num">10</span>
+    <h2>Printing &amp; export</h2>
+    <p class="lede">Three ways to get your chart off the screen.</p>
+    <table>
+      <tr><td><span class="ui">Download PNG</span></td><td>An image file, with a quality choice that shows the file size before you commit.</td></tr>
+      <tr><td><span class="ui">Download PDF</span></td><td>A proper PDF, same quality choices.</td></tr>
+      <tr><td><span class="ui">Print Chart</span></td><td>Prints at the highest quality — no options to pick.</td></tr>
+    </table>
+    <h3>Color modes</h3>
+    <p>PNG and PDF each offer three:</p>
+    <ul>
+      <li><strong>Digital — Full Color</strong> — exactly as it looks on screen.</li>
+      <li><strong>Print — Color</strong> — white background, no stage texture. Kinder to paper and ink.</li>
+      <li><strong>Print — Black &amp; White</strong> — greyscale, adjusted so names and labels stay readable without their colors.</li>
+    </ul>
+    <div class="note">
+      <span class="tag">Tip</span>
+      <p><kbd>Ctrl</kbd>+<kbd>P</kbd> (or <kbd>⌘</kbd>+<kbd>P</kbd>) opens the app's own print dialog rather than your browser's, so you get just the chart instead of the whole page with the side panel.</p>
+    </div>
+  </div>
+</section>
+
+<section id="keys">
+  <div class="wrap">
+    <span class="sec-num">11</span>
+    <h2>Keyboard shortcuts</h2>
+    <table>
+      <tr><th>Shortcut</th><th>What it does</th></tr>
+      <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd></td><td>Undo</td></tr>
+      <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>A</kbd></td><td>Select every chair</td></tr>
+      <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>P</kbd></td><td>Print the chart</td></tr>
+      <tr><td>Arrow keys</td><td>Nudge the selected chairs</td></tr>
+      <tr><td><kbd>Delete</kbd></td><td>Delete what's selected</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Leave a tool, close a dialog, or deselect</td></tr>
+      <tr><td>Double-click</td><td>Edit a name, label, or text box on the chart</td></tr>
+    </table>
+    <div class="note">
+      <span class="tag">Handy</span>
+      <p>After you've used a slider, <kbd>Esc</kbd> releases it — so the arrow keys go back to nudging chairs instead of moving the slider.</p>
+    </div>
+  </div>
+</section>
+
+<section id="help">
+  <div class="wrap">
+    <span class="sec-num">12</span>
+    <h2>Troubleshoot</h2>
+
+    <h3>A slider stops before I want it to</h3>
+    <p>The chart has reached the edge of the visible area, or chairs would begin to overlap. The handle springing back is the app showing you the furthest setting that actually worked. Make room elsewhere first — often lowering <strong>Seat spacing</strong> frees up the most.</p>
+
+    <h3>It won't let me add another row</h3>
+    <p>There isn't room for one without overlapping or running off the stage. Lower the row and seat spacing, or move the formation forward with stage spacing, then try again. Sometimes the stage is genuinely full.</p>
+
+    <h3>I moved a chair and now it won't line up</h3>
+    <p>Select it and use <span class="ui">Reset</span>, or press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> to step back. Chairs you've moved by hand keep their position on purpose, so the sliders move them along with the row rather than snapping them back.</p>
+
+    <h3>My names are on the wrong chairs</h3>
+    <p>Names fill in rank order, so it usually means the list order needs adjusting rather than the chart. Drag names in the roster list, or double-click a name on the chart to correct it directly.</p>
+
+    <h3>My saved charts have disappeared</h3>
+    <p>Saved charts live in this browser. Clearing browsing data, switching browsers, or using a different computer will lose them. Download a chart file for anything you want to keep.</p>
+
+    <h3>The black &amp; white print is hard to read</h3>
+    <p>Use <strong>Print — Black &amp; White</strong> rather than printing the full-color version on a mono printer. It's adjusted so labels and names stay legible once the colors are gone.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Seating Chart Studio</strong> — everything runs in your browser. No account, no upload, nothing leaves your computer.</p>
+    <p>Copyright © 2026 maestrowang. All rights reserved. This code is for review and educational purposes only. No part of this repository may be copied, distributed, or modified without explicit written permission from the author.</p>
+  </div>
+</footer>
+
+</body>
+</html>
