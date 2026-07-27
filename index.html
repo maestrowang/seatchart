@@ -478,6 +478,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   .section h3.collapsible:hover .chev{ color:var(--brass); }
   .section.collapsed h3.collapsible .chev{ transform:rotate(-90deg); }
   .section.collapsed .section-content{ display:none; }
+  .guide-link{
+    display:inline-block;
+    font-size:12.5px; letter-spacing:.02em;
+    color:var(--ink-soft); text-decoration:none;
+    border-bottom:1px solid var(--line);
+    padding-bottom:2px;
+    transition:color .12s ease, border-color .12s ease, transform .2s ease;
+  }
+  .guide-link:hover, .guide-link:focus-visible{
+    color:var(--brass); border-bottom-color:var(--brass); transform:translateX(2px);
+  }
   .collapse-all-row{ display:flex; gap:8px; margin:4px 0 18px; }
   .collapse-all-row button{ flex:1; font-size:11.5px; padding:6px 8px; }
   label.field{ display:block; margin-bottom:8px; }
@@ -956,9 +967,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     </div>
 
     <div class="section">
+      <div style="text-align:center; margin-bottom:14px;">
+        <a href="guide.html" target="_blank" rel="noopener" class="guide-link">User Guide</a>
+      </div>
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.3.1</span>
+        v<span id="appVersion">5.4.0</span>
       </div>
     </div>
   </aside>
@@ -1241,7 +1255,11 @@ let groupDragStartPositions = null;
 
 let canvas = document.getElementById('chart');
 let ctx = canvas.getContext('2d');
-let exportRenderOptions = null; // { whiteBg, skipGrid } while rendering for export/print; null for normal on-screen rendering
+let exportRenderOptions = null;
+// True while drawing for any download or print. Distinct from exportRenderOptions,
+// which 'screen' mode deliberately leaves null so the output matches the display --
+// editing-only affordances must still be left out of that file.
+let isExporting = false; // { whiteBg, skipGrid } while rendering for export/print; null for normal on-screen rendering
 
 // window.storage only exists inside Claude's own artifact-preview sandbox -- it is NOT
 // a standard browser API, so opening this file locally, hosting it on GitHub Pages, or
@@ -3004,6 +3022,10 @@ function drawPodium(){
     const startY = pos.y - ((fit.lines.length-1)*lh)/2;
     fit.lines.forEach((line,i)=> ctx.fillText(line, pos.x, startY + i*lh));
   } else {
+    // The dashed outline and its prompt are an editing affordance, not part of
+    // the chart. Exporting or printing should show a disabled podium as simply
+    // absent, the way it would look on a real stage.
+    if(isExporting){ ctx.restore(); return; }
     ctx.setLineDash([4,3]);
     ctx.strokeStyle = 'rgba(91,85,72,0.55)';
     ctx.lineWidth = 1.3;
@@ -6172,7 +6194,9 @@ function renderChartToOffscreenCanvas(mode, scale){
   const savedCanvas = canvas, savedCtx = ctx;
   canvas = canvasProxy; ctx = offCtx;
   exportRenderOptions = mode === 'screen' ? null : { whiteBg: true, skipGrid: true, bw: mode === 'print-bw' };
+  isExporting = true;
   render();
+  isExporting = false;
   exportRenderOptions = null;
   canvas = savedCanvas; ctx = savedCtx;
 
