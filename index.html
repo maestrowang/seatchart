@@ -958,7 +958,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     <div class="section">
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.3.0</span>
+        v<span id="appVersion">5.3.1</span>
       </div>
     </div>
   </aside>
@@ -1698,11 +1698,17 @@ function beginSpacingGesture(){
     // centre instead, so the selection still behaves like one formation.
     bandCentre[i] = best !== -1 ? bandCentre[best] : overallCentre;
   });
+  // When a selection is active the sliders are SCOPED: they sit at 100 meaning
+  // "no further change to these seats", regardless of the chart's global figures.
+  // Baselining a scoped gesture against the global value makes the very first
+  // input re-apply a change the chart has already had, which compounds every
+  // time the slider is released and used again.
+  const scoped = selection.size > 0;
   return { anchorY, centerX, points, bandDepth, bandCentre, bandOf,
            pod, bandIsArc, bandMeanAngle, bandRadius, angleOf, radiusOf, seatIsFlat,
-           startSeatPct: chart.seatSpacing || 100,
-           startRowPct: chart.rowSpacing || 100,
-           startStagePct: chart.stageSpacing || 100 };
+           startSeatPct:  scoped ? 100 : (chart.seatSpacing  || 100),
+           startRowPct:   scoped ? 100 : (chart.rowSpacing   || 100),
+           startStagePct: scoped ? 100 : (chart.stageSpacing || 100) };
 }
 
 // Translate every depth equally -- trivially order-preserving.
@@ -1727,12 +1733,17 @@ function gestureRowSpacing(g, ratio){
   return g.points.map(p=>{
     const bi = g.bandOf.get(p.id);
     const delta = nr[bi] - g.bandRadius[bi];
+    // Row spacing changes the gaps BETWEEN rows; it must not also stretch the
+    // spread within a row. Scaling each seat's own offset from its row was fine
+    // for a tidy row where those offsets are tiny, but a loose group of freeform
+    // chairs has large, unordered offsets -- scaling those fans the chairs apart
+    // and lets them cross one another. Shift the whole row instead.
     if(g.seatIsFlat && g.seatIsFlat.get(p.id)){
-      // A straight row stays straight: apply the same radial change as a plain
-      // shift straight back, rather than swinging it onto an arc.
-      return { id:p.id, lateral:p.lateral, depth: p.depth + delta + (p.depth - g.bandDepth[bi]) * (ratio-1) };
+      // A straight row stays straight: apply the radial change as a plain shift
+      // straight back, rather than swinging it onto an arc.
+      return { id:p.id, lateral:p.lateral, depth: p.depth + delta };
     }
-    const rad = g.radiusOf.get(p.id) + delta + (g.radiusOf.get(p.id) - g.bandRadius[bi]) * (ratio-1);
+    const rad = g.radiusOf.get(p.id) + delta;
     const ang = g.angleOf.get(p.id);
     const x = g.pod.x + Math.sin(ang) * rad;
     const y = g.pod.y - Math.cos(ang) * rad;
@@ -5536,6 +5547,18 @@ function beginSliderDrag(){
 }
 function endSliderDrag(){
   spacingGesture = null;
+  // With a selection active the sliders are scoped, so their neutral point is
+  // always 100 -- "no further change to what is selected". Leaving the thumb
+  // wherever the last gesture ended means the next gesture reads a value that
+  // has already been applied and applies it a second time, compounding. Reset
+  // the thumbs so every scoped gesture starts from a true neutral.
+  if(selection.size > 0){
+    document.getElementById('seatSpacing').value = 100;
+    document.getElementById('rowSpacingSlider').value = 100;
+    document.getElementById('stageSpacingSlider').value = 100;
+    lastRowSpacingPct = 100;
+    return;
+  }
   // Snap each slider to the value that was actually applied. If the stage ran out
   // of room the thumb springs back to the limit, which both tells the person what
   // happened and keeps the next drag measuring from a real starting point.
