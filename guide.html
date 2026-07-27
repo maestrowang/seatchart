@@ -212,7 +212,9 @@
     background:var(--stage); color:rgba(247,243,233,0.55);
     padding:38px 0; font-size:13.5px;
   }
-  footer p{ margin:0 0 6px; max-width:70ch; }
+  /* The footer band runs the full width, so its text should too -- a 70ch
+     measure left it stopping well short of the background it sits on. */
+  footer p{ margin:0 0 6px; max-width:none; }
   footer strong{ color:rgba(247,243,233,0.8); font-weight:500; }
 
   a{ color:var(--wood); }
@@ -292,9 +294,9 @@
       <li><a href="#seats"><span class="num">03</span>Editing seats</a></li>
       <li><a href="#spacing"><span class="num">04</span>Spacing &amp; size</a></li>
       <li><a href="#tools"><span class="num">05</span>Extra tools</a></li>
-      <li><a href="#roster"><span class="num">06</span>Player names</a></li>
+      <li><a href="#roster"><span class="num">06</span>Musician names</a></li>
       <li><a href="#groups"><span class="num">07</span>Groups</a></li>
-      <li><a href="#view"><span class="num">08</span>What's shown</a></li>
+      <li><a href="#view"><span class="num">08</span>Chart view</a></li>
       <li><a href="#save"><span class="num">09</span>Saving &amp; sharing</a></li>
       <li><a href="#export"><span class="num">10</span>Printing &amp; export</a></li>
       <li><a href="#keys"><span class="num">11</span>Keyboard shortcuts</a></li>
@@ -313,7 +315,7 @@
     <ol class="steps">
       <li>Under <span class="ui">Build Rows</span>, set how many chairs you want, pick <strong>Curved</strong> or <strong>Straight</strong>, and click <span class="ui">+ Add Row</span>. Repeat for each row.</li>
       <li>Click any chair to select it, then choose its instrument. The chair takes on that section's color.</li>
-      <li>Open <span class="ui">Roster</span> at the top right and paste your player names in.</li>
+      <li>Open <span class="ui">Roster</span> at the top right and paste your musician names in.</li>
       <li>Use <span class="ui">Print Chart</span> or <span class="ui">Download PDF</span> when you're happy with it.</li>
     </ol>
     <h3>How the panel is organized</h3>
@@ -419,7 +421,7 @@
 <section id="roster">
   <div class="wrap">
     <span class="sec-num">06</span>
-    <h2>Player names</h2>
+    <h2>Musician names</h2>
     <p class="lede">The <span class="ui">Roster</span> button sits at the top right. Names attach to chairs in order — first name to the first chair, and so on down the section.</p>
     <ol class="steps">
       <li>Open the roster and choose a section from the dropdown.</li>
@@ -430,7 +432,7 @@
     <p>You can change that per section under <span class="ui">View</span> → <strong>Show seat rank numbers</strong>:</p>
     <table>
       <tr><td><strong>Standard</strong></td><td>Fills row by row, front to back — the default.</td></tr>
-      <tr><td><strong>Outer seat priority</strong></td><td>Fills the outer chairs of every row first, then comes back for the inner ones. Useful when the strongest players sit on the outside of each stand.</td></tr>
+      <tr><td><strong>Outer seat priority</strong></td><td>Fills the outer chairs of every row first, then comes back for the inner ones. Useful when the strongest musicians sit on the outside of each stand.</td></tr>
       <tr><td><strong>Invert ranking</strong></td><td>Reverses whichever order you've chosen, so the last chair becomes first.</td></tr>
       <tr><td><strong>Hide rank numbers</strong></td><td>Keeps the ordering but takes the badges off the chart for that section.</td></tr>
     </table>
@@ -464,12 +466,12 @@
 <section id="view">
   <div class="wrap">
     <span class="sec-num">08</span>
-    <h2>What's shown</h2>
+    <h2>Chart view</h2>
     <p class="lede">The <span class="ui">View</span> section controls what appears on the chart. All of it is display only — turning something off never deletes it.</p>
     <table>
       <tr><td><strong>Seat rank numbers</strong></td><td>Small numbered badges, with per-section control over ordering.</td></tr>
       <tr><td><strong>Seat labels</strong></td><td>Instrument abbreviations on each chair.</td></tr>
-      <tr><td><strong>Roster names</strong></td><td>Player names on each chair.</td></tr>
+      <tr><td><strong>Roster names</strong></td><td>Musician names on each chair.</td></tr>
       <tr><td><strong>Music stands</strong></td><td>Draws the stands. Links are kept either way.</td></tr>
       <tr><td><strong>Section legend</strong></td><td>The color key.</td></tr>
       <tr><td><strong>Flip</strong></td><td>Turns the chart around to the performer's point of view.</td></tr>
