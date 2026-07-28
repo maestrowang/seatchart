@@ -349,13 +349,22 @@ string for that entry:
 
 You can mix plain strings and `{file, name}` objects freely in the same list.
 
-### Included example
+### Included examples
 
-This repo ships with one example already set up:
-`templates/standard-small-ensemble.seatchart.json`, listed in
-`templates/manifest.json` as "Standard Small Ensemble" -- a small string section
-with a few instruments assigned, mainly so you can see the expected file layout.
-Feel free to remove it and replace it with your own.
+This repo ships with seven ensemble templates already set up in
+`templates/manifest.json`, so you can see the expected file layout:
+
+| File | Shows in app as |
+| --- | --- |
+| `String_Orchestra.seatchart.json` | String Orchestra |
+| `String_Orchestra_LG.seatchart.json` | String Orchestra LG |
+| `Chamber_Orchestra.seatchart.json` | Chamber Orchestra |
+| `Symphony_Orchestra.seatchart.json` | Symphony Orchestra |
+| `German_Symphony.seatchart.json` | German Symphony |
+| `Antiphonal_Full_Orchestra.seatchart.json` | Antiphonal Full Orchestra |
+| `Wind_Ensemble.seatchart.json` | Wind Ensemble |
+
+Feel free to remove any of them and replace them with your own.
 
 ### Notes
 

@@ -5522,6 +5522,11 @@ document.getElementById('rosterPasteApplyBtn').onclick = ()=>{
   pushHistory();
   if(!chart.rosters) chart.rosters = {};
   chart.rosters[section] = names;
+  // A shuffle is a permutation of indices into the *previous* list, so it means nothing
+  // once that list is replaced -- stale indices would scramble the pasted order, or point
+  // past the end of a shorter list and blank those seats out entirely. Drop it so the
+  // pasted order is what you see.
+  if(chart.rosterShuffle) delete chart.rosterShuffle[section];
   document.getElementById('rosterPasteWrap').style.display = 'none';
   renderRosterNameList();
   render();
