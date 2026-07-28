@@ -33,9 +33,9 @@ red by feeding them a deliberately failing test.
 
 | Count | Kind |
 |---|---|
-| 58 | asserting tests (`RESULT: PASS`/`FAIL`) |
+| 60 | asserting tests (`RESULT: PASS`/`FAIL`) |
 | 29 | investigation scripts — print measurements, no verdict |
-| 7 | JSON chart fixtures (`addrow_case.json` is currently unreferenced) |
+| 6 | JSON chart fixtures |
 
 Of the 29 investigation scripts, 23 are named `test_debug_*`; the rest are
 `test_isolate_*`, `test_textbox_part*`, and `test_slider_performance.js`.

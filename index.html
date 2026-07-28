@@ -972,7 +972,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.4.1</span>
+        v<span id="appVersion">5.4.2</span>
       </div>
     </div>
   </aside>
@@ -1620,6 +1620,7 @@ function groupIntoBands(points, seats){
   groups.push(cur);
 
   const medDepth = g => { const d=g.map(x=>x.depth).sort((a,b)=>a-b); return d[Math.floor(d.length/2)]; };
+  const medRadius = g => { const r=g.map(radiusOf).sort((a,b)=>a-b); return r[Math.floor(r.length/2)]; };
   // Seats the chart already considers one row must never end up in separate
   // bands. Radius banding splits a straight row because its radius genuinely
   // varies along its length, and a split row would then have its halves moved
@@ -1633,7 +1634,20 @@ function groupIntoBands(points, seats){
       for(let j=i+1;j<groups.length;j++){
         const rj = rowsOf(groups[j]);
         const shares = [...ri].some(r=>rj.has(r));
-        if(shares || Math.abs(medDepth(groups[i]) - medDepth(groups[j])) < 16){
+        // Proximity merging exists to adopt freeform chairs into the row they
+        // visually sit with -- they have no row of their own to be matched by.
+        // It must never fuse two rows the chart considers distinct: doing so
+        // welds them into one band, and row spacing can then no longer open the
+        // gap between them. When the front row is the one absorbed, the whole
+        // band inherits its anchor and stops moving entirely.
+        const freeform = ri.size === 0 || rj.size === 0;
+        // Measured in RADIUS, not depth. Concentric arcs nest, so an outer row's
+        // end seats sit beside the row in front rather than behind it: a 5-seat
+        // back row at radius 377 can share a median depth with row 0 at 148.
+        // Depth is the wrong frame for a curve -- which is why the banding above
+        // is radius-based in the first place.
+        const near = Math.abs(medRadius(groups[i]) - medRadius(groups[j])) < 16;
+        if(shares || (freeform && near)){
           const removed = groups.splice(j, 1)[0];
           groups[i] = groups[i].concat(removed);
           merged = true; break;
@@ -1641,7 +1655,10 @@ function groupIntoBands(points, seats){
       }
     }
   }
-  groups.sort((a,b)=>medDepth(a)-medDepth(b));
+  // Radially, not vertically: stage spacing preserves y-order but row spacing
+  // works outward from the podium, and nested arcs can cross in y while still
+  // being correctly ordered by radius.
+  groups.sort((a,b)=>medRadius(a)-medRadius(b));
   return groups;
 }
 
@@ -6131,6 +6148,38 @@ function applyLoadedChartData(data, nameForField){
   if(!data.rosterShuffle || typeof data.rosterShuffle !== 'object' || Array.isArray(data.rosterShuffle)){
     data.rosterShuffle = {};
   }
+  // A shuffle is only meaningful against the exact roster it was built from: it
+  // stores indices into that array, so if the two ever disagree the indices
+  // point at names that have moved or no longer exist. getRosterAssignments
+  // skips an out-of-range index rather than throwing, which means a mismatch
+  // does not announce itself -- it just renders a seat blank, or quietly hands
+  // a name to the wrong chair. Neither reads as a bug to the person looking at
+  // the chart, so catch it here instead.
+  //
+  // Dropping the shuffle is the safe repair. Names live in data.rosters and are
+  // never touched, so nothing is lost but a random arrangement, and the result
+  // is exactly the "Revert to Original" state the user already understands. A
+  // partial permutation could in principle be patched up, but any reconstruction
+  // would be a guess about which player belongs in which chair -- worse than
+  // plainly falling back to roster order.
+  Object.keys(data.rosterShuffle).forEach(key=>{
+    const perm = data.rosterShuffle[key];
+    const names = Array.isArray(data.rosters[key]) ? data.rosters[key] : [];
+    // Length 0 counts as broken, not as a harmless no-op: the roster panel
+    // treats the mere presence of an entry as "shuffled", so an empty one would
+    // disable drag-reordering and show the shuffled note over an empty list.
+    let ok = Array.isArray(perm) && perm.length > 0 && perm.length === names.length;
+    if(ok){
+      // Must be a true permutation of 0..n-1 -- every rank filled exactly once.
+      // A duplicated index would show one player twice and drop another.
+      const seen = new Set();
+      for(const v of perm){
+        if(!Number.isInteger(v) || v < 0 || v >= names.length || seen.has(v)){ ok = false; break; }
+        seen.add(v);
+      }
+    }
+    if(!ok) delete data.rosterShuffle[key];
+  });
   if(!Array.isArray(data.textBoxes)) data.textBoxes = [];
   chart = data;
   selectedTextBoxId = null;
