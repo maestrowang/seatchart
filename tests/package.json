@@ -1,0 +1,8 @@
+{
+  "name": "seating-chart-studio-tests",
+  "private": true,
+  "description": "Behavioral test suite. Each file prints RESULT: PASS or RESULT: FAIL.",
+  "dependencies": {
+    "jsdom": "^24.1.3"
+  }
+}
