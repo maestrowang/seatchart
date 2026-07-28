@@ -1,6 +1,6 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const html = fs.readFileSync('/home/claude/test.html', 'utf8');
+const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
 const noop = () => {};
 const fakeCtxProto = {
   save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
@@ -31,7 +31,7 @@ function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 (async()=>{
   await wait(300);
   const doc = window.document;
-  const chartData = JSON.parse(fs.readFileSync('/home/claude/Symphony_Orchestra_test__seatchart.json', 'utf8'));
+  const chartData = JSON.parse(fs.readFileSync(__dirname + '/Symphony_Orchestra_test__seatchart.json', 'utf8'));
 
   console.log('=== Test 1: global seat size (no selection) does not touch positions or spacing ===');
   window.eval(`applyLoadedChartData(${JSON.stringify(chartData)}, 'test')`);

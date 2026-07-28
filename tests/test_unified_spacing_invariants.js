@@ -1,6 +1,6 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const html = fs.readFileSync('/home/claude/test.html','utf8');
+const html = fs.readFileSync(__dirname + '/../index.html','utf8');
 const noop=()=>{};
 const ctxProto={save:noop,restore:noop,translate:noop,scale:noop,rotate:noop,beginPath:noop,moveTo:noop,lineTo:noop,closePath:noop,fill:noop,stroke:noop,arc:noop,rect:noop,fillRect:noop,strokeRect:noop,fillText:noop,setLineDash:noop,measureText:()=>({width:10}),clearRect:noop,drawImage:noop,ellipse:noop,roundRect:noop,bezierCurveTo:noop,quadraticCurveTo:noop,getImageData:(x,y,w,h)=>({data:new Uint8ClampedArray(w*h*4).fill(128),width:w,height:h}),putImageData:noop};
 const dom=new JSDOM(html,{url:'https://example.github.io/seating-chart/',runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,
@@ -11,7 +11,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   await wait(300);
   const doc=window.document;
-  const chartData=JSON.parse(fs.readFileSync('/home/claude/latest_upload.json','utf8'));
+  const chartData=JSON.parse(fs.readFileSync(__dirname + '/latest_upload.json','utf8'));
 
   const results=[];
   const rec=(n,ok,d='')=>results.push({n,ok,d});

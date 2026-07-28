@@ -1,5 +1,5 @@
 const { JSDOM } = require('jsdom'); const fs=require('fs');
-const html=fs.readFileSync('/home/claude/test.html','utf8'); const noop=()=>{};
+const html=fs.readFileSync(__dirname + '/../index.html','utf8'); const noop=()=>{};
 const c={save:noop,restore:noop,translate:noop,scale:noop,rotate:noop,beginPath:noop,moveTo:noop,lineTo:noop,closePath:noop,fill:noop,stroke:noop,arc:noop,rect:noop,fillRect:noop,strokeRect:noop,fillText:noop,setLineDash:noop,measureText:()=>({width:10}),clearRect:noop,drawImage:noop,ellipse:noop,roundRect:noop,bezierCurveTo:noop,quadraticCurveTo:noop,getImageData:(x,y,w,h)=>({data:new Uint8ClampedArray(w*h*4).fill(128),width:w,height:h}),putImageData:noop};
 const dom=new JSDOM(html,{url:'https://x.io/',runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,
  beforeParse(w){ w.addEventListener('error',e=>console.log('  PAGE ERROR:',e.message));
@@ -8,7 +8,7 @@ const {window}=dom; const doc=window.document; const wait=ms=>new Promise(r=>set
 const R=[]; const rec=(n,ok,d='')=>R.push({n,ok,d});
 (async()=>{
   await wait(300);
-  const d=JSON.parse(fs.readFileSync('/home/claude/latest_upload.json','utf8'));
+  const d=JSON.parse(fs.readFileSync(__dirname + '/latest_upload.json','utf8'));
   const load=async()=>{ window.eval('applyLoadedChartData('+JSON.stringify(d)+",'t')"); await wait(40); window.eval('clearSelection()'); await wait(8); };
   const pos=()=>window.eval('JSON.stringify(chart.seats.map(s=>[Math.round(s.x*100),Math.round(s.y*100)]))');
   const drag=async(id,vals)=>{ const el=doc.getElementById(id);

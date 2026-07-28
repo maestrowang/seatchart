@@ -1,4 +1,1 @@
 node_modules/
-
-# Scratch copy of the app that the test suite reads (see tests/README.md).
-test.html

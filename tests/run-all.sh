@@ -9,10 +9,9 @@
 set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FIXTURE_HOME="${SEATCHART_FIXTURE_HOME:-/home/claude}"
 FILTER="${1:-}"
 
-[ -f "$FIXTURE_HOME/test.html" ] || { echo "Run 'bash tests/setup.sh' first." >&2; exit 1; }
+[ -d "$REPO/tests/node_modules/jsdom" ] || { echo "Run 'bash tests/setup.sh' first." >&2; exit 1; }
 
 cd "$REPO/tests"
 pass=0; fail=0; diag=0; failed_files=()

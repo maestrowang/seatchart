@@ -1,14 +1,16 @@
 # Seating Chart Studio — Engineering Handoff
 
 Written for a fresh agent or developer picking this up cold.
-App version at handoff: **5.4.0**. Test suite: **86 files, all passing.**
+Current app version: **5.4.1**. Test suite: **87 files, all passing** — 58 of
+them assert a `RESULT:` verdict, the other 29 are investigation scripts that
+print measurements only.
 
 ---
 
 ## 1. What this is
 
 A single-file browser app for building orchestra/band seating charts.
-`seating-chart-studio.html` is ~6,500 lines of vanilla JS + Canvas with no
+`index.html` is ~6,500 lines of vanilla JS + Canvas with no
 build step, no framework, and no backend. It is deployed as a static file
 (GitHub Pages). Charts save to `localStorage` or download as
 `.seatchart.json`.
@@ -17,11 +19,12 @@ Shipped alongside it:
 
 | File | Purpose |
 |---|---|
-| `seating-chart-studio.html` | the entire app (deployed as `index.html`) |
+| `index.html` | the entire app (was `seating-chart-studio.html` pre-merge) |
 | `guide.html` | end-user guide, linked from the app footer |
 | `README.md` | repo-owner docs, incl. publishing templates |
 | `favicon.png` | referenced by both HTML files |
 | `templates/` | optional `manifest.json` + `.seatchart.json` files |
+| `tests/`, `design/` | test suite and DOM-free design suites |
 
 **Licence:** all rights reserved, notice in both HTML headers and `README.md`.
 The app bundles jsPDF (MIT) — its `@license` block must stay, and the
@@ -90,7 +93,7 @@ each input                →  gesture{Stage,RowSpacing,SeatSpacing}(g, ratio)
 change (release)          →  endSliderDrag()          clear + reset thumbs
 ```
 
-Key functions (`seating-chart-studio.html`):
+Key functions (`index.html`):
 
 | Line | Function |
 |---|---|
@@ -153,22 +156,20 @@ into overlapping chairs.
 ### 4.1 Running
 
 ```bash
-npm install jsdom          # only dependency
-cp seating-chart-studio.html test.html   # tests read ./test.html
-node tests/test_<name>.js                # each prints "RESULT: PASS|FAIL"
+bash tests/setup.sh          # installs jsdom, the only dependency
+bash tests/run-all.sh        # runs everything, prints a summary
+bash tests/run-all.sh roster # or filter by substring
+node tests/test_<name>.js    # each prints "RESULT: PASS|FAIL"
 ```
 
-Run everything (takes a few minutes; batch it to avoid timeouts):
+The full run takes a few minutes. `run-all.sh` exits non-zero if any asserting
+test fails, so it works as a CI gate.
 
-```bash
-for f in tests/test_*.js; do
-  echo "$f -> $(node "$f" 2>&1 | grep -E 'RESULT|PART [0-9]+:' | tail -1)"
-done
-```
-
-> **Paths:** tests reference `/home/claude/test.html` and
-> `/home/claude/<fixture>.json`. Rewrite those to your checkout, or symlink.
-> Fixtures live in `tests/` under the exact names the tests expect.
+> **Paths:** tests resolve everything from `__dirname` — the app as
+> `../index.html`, fixtures as siblings in `tests/`. There is no copy step and
+> no `test.html`; the suite reads the real `index.html`, so it cannot silently
+> test a stale build. This replaced hardcoded `/home/claude/...` literals that
+> had to be recreated by hand on every checkout.
 
 ### 4.2 The harness
 
@@ -268,6 +269,7 @@ raised but not resolved:
 | 5.3.0 | Four row-adding bugs: crushed rows, unclamped arc span, judged-too-early placement |
 | 5.3.1 | Scoped-slider compounding; row spacing no longer stretches within a row |
 | 5.4.0 | Disabled podium excluded from all exports; user guide + footer link |
+| 5.4.1 | Roster paste now clears that section's shuffle (stale permutation blanked/scrambled pasted names); test suite + design suites merged into the repo |
 
 ---
 

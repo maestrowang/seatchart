@@ -27,6 +27,7 @@ no data leaves your machine.
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Templates](#templates)
 - [Adding templates via repo files](#adding-templates-via-repo-files)
+- [Development](#development)
 
 ---
 
@@ -379,3 +380,26 @@ Feel free to remove any of them and replace them with your own.
 - These file-based templates are read-only from the app's side -- there's no
   delete button for them in the UI, since they're managed by editing the repo
   directly, not through the app.
+
+---
+
+## Development
+
+The app is a single self-contained `index.html` -- no build step, no framework,
+no backend. Edit it directly and open it in a browser.
+
+```bash
+bash tests/setup.sh     # installs jsdom, the only dependency
+bash tests/run-all.sh   # runs the suite, exits non-zero on failure
+```
+
+Tests read `index.html` directly, so there's nothing to rebuild or copy first.
+The DOM-free design suites cover the spacing model on their own:
+
+```bash
+cd design && node properties.test.js && node fuzz.test.js
+```
+
+See `tests/README.md` for how the harness works, and `HANDOFF.md` for the
+architecture behind the spacing subsystem -- worth reading before changing
+anything about how seats are positioned.

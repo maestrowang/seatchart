@@ -1,5 +1,5 @@
 const { JSDOM } = require('jsdom'); const fs=require('fs');
-const html=fs.readFileSync('/home/claude/test.html','utf8'); const noop=()=>{};
+const html=fs.readFileSync(__dirname + '/../index.html','utf8'); const noop=()=>{};
 const drawn=[];
 const c={save:noop,restore:noop,translate:noop,scale:noop,rotate:noop,beginPath:noop,moveTo:noop,lineTo:noop,closePath:noop,fill:noop,
   stroke(){ drawn.push({op:'stroke', dash:this._dash}); },

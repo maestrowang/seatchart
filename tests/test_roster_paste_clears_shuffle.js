@@ -14,7 +14,7 @@
 // No pre-existing test combined shuffle with paste, which is why this survived.
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const html = fs.readFileSync('/home/claude/test.html', 'utf8');
+const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
 const noop = () => {};
 const fakeCtxProto = {
   save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,

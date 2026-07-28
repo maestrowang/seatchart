@@ -1,6 +1,6 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const html = fs.readFileSync('/home/claude/test.html', 'utf8');
+const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
 const noop = () => {};
 const fakeCtxProto = {
   save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
@@ -31,7 +31,7 @@ function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 (async()=>{
   await wait(300);
   const doc = window.document;
-  const chartData = JSON.parse(fs.readFileSync('/home/claude/latest_upload.json', 'utf8'));
+  const chartData = JSON.parse(fs.readFileSync(__dirname + '/latest_upload.json', 'utf8'));
 
   async function reload(){
     window.eval(`applyLoadedChartData(${JSON.stringify(chartData)}, 'test')`);

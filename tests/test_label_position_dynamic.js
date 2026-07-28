@@ -1,6 +1,6 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const html = fs.readFileSync('/home/claude/test.html', 'utf8');
+const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
 const noop = () => {};
 const drawnChips = [];
 const fakeCtxProto = {

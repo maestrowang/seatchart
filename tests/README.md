@@ -23,7 +23,7 @@ cd design && node properties.test.js && node fuzz.test.js
 |---|---|
 | 58 | asserting tests (`RESULT: PASS`/`FAIL`) |
 | 29 | investigation scripts — print measurements, no verdict |
-| 7 | JSON chart fixtures |
+| 7 | JSON chart fixtures (`addrow_case.json` is currently unreferenced) |
 
 Of the 29 investigation scripts, 23 are named `test_debug_*`; the rest are
 `test_isolate_*`, `test_textbox_part*`, and `test_slider_performance.js`.
@@ -37,17 +37,15 @@ timing (~6.8ms at 368 seats, inside a 60fps budget) but does not assert a
 threshold, so a performance regression there will not turn the suite red on its
 own — read its output.
 
-## The absolute-path quirk
+## Paths
 
-The tests read `/home/claude/test.html` and `/home/claude/<fixture>.json` by
-absolute path — that literal appears in 86 files. `setup.sh` stages the files
-there rather than rewriting all of them. If `/home/claude` isn't writable on
-your machine, either run setup with `sudo`, or create the directory once and
-chown it to yourself.
+Everything resolves from `__dirname`: the app as `../index.html`, fixtures as
+siblings in this directory. Clone anywhere, `bash tests/setup.sh`, run.
 
-`test.html` is a copy of `index.html`; it's gitignored so a stale copy can't be
-committed. Re-run `setup.sh` after editing `index.html` or you'll be testing
-the previous build — the most common way to get a confusing result here.
+There is no copy step and no `test.html`. The suite reads the real
+`index.html`, so it is not possible to accidentally test a stale build — which
+was the failure mode of the previous `cp index.html /home/claude/test.html`
+arrangement.
 
 ## The harness
 
@@ -58,6 +56,12 @@ see `test_disabled_podium_export.js`.
 
 Simulate a real drag as `mousedown → input × N → change`. Keyboard stepping is
 `input × N → change` with no mousedown; that distinction has exposed real bugs.
+
+**Expected noise:** every test prints a `ReferenceError: TextEncoder is not
+defined` stack trace on stderr. The bundled jsPDF needs `TextEncoder` at load
+and jsdom doesn't supply it; real browsers do. It only stops jsPDF from
+initialising, which no test exercises, so it is harmless — `run-all.sh`
+discards stderr for exactly this reason. Don't chase it.
 
 ## Conventions
 
