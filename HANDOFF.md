@@ -163,7 +163,14 @@ node tests/test_<name>.js    # each prints "RESULT: PASS|FAIL"
 ```
 
 The full run takes a few minutes. `run-all.sh` exits non-zero if any asserting
-test fails, so it works as a CI gate.
+test fails. `.github/workflows/tests.yml` runs it, plus `design/run-all.sh`, on
+every push to `main` and `claude/**` and on PRs into `main`.
+
+> **Don't run the design suites directly from CI.** `properties.test.js` and
+> `fuzz.test.js` print `RESULT: PASS`/`FAIL` but never call `process.exit`, so
+> they exit 0 even when failing — `node properties.test.js` as a CI step is a
+> gate that cannot go red. `design/run-all.sh` reads the verdict and sets the
+> exit code; use it.
 
 > **Paths:** tests resolve everything from `__dirname` — the app as
 > `../index.html`, fixtures as siblings in `tests/`. There is no copy step and

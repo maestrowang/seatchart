@@ -14,8 +14,20 @@ bash tests/run-all.sh roster   # or filter by substring
 The design suites are DOM-free and need no setup:
 
 ```bash
-cd design && node properties.test.js && node fuzz.test.js
+bash design/run-all.sh
 ```
+
+Run those two scripts directly rather than invoking a suite by hand. Both
+`design/properties.test.js` and `design/fuzz.test.js` print `RESULT: PASS` or
+`RESULT: FAIL` but never call `process.exit`, so they exit 0 either way —
+`node properties.test.js` on its own cannot tell you it failed except by what
+it prints. `design/run-all.sh` reads the verdict and sets the exit code.
+
+## CI
+
+`.github/workflows/tests.yml` runs both scripts on every push to `main` and
+`claude/**`, and on PRs into `main`. Both gates were verified to actually go
+red by feeding them a deliberately failing test.
 
 ## What's here
 

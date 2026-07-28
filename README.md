@@ -397,8 +397,11 @@ Tests read `index.html` directly, so there's nothing to rebuild or copy first.
 The DOM-free design suites cover the spacing model on their own:
 
 ```bash
-cd design && node properties.test.js && node fuzz.test.js
+bash design/run-all.sh
 ```
+
+Both scripts exit non-zero on failure, and GitHub Actions runs them on every
+push and pull request (`.github/workflows/tests.yml`).
 
 See `tests/README.md` for how the harness works, and `HANDOFF.md` for the
 architecture behind the spacing subsystem -- worth reading before changing
