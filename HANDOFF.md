@@ -1,7 +1,7 @@
 # Seating Chart Studio — Engineering Handoff
 
 Written for a fresh agent or developer picking this up cold.
-Current app version: **5.4.1**. Test suite: **87 files, all passing** — 58 of
+Current app version: **5.4.2**. Test suite: **89 files, all passing** — 60 of
 them assert a `RESULT:` verdict, the other 29 are investigation scripts that
 print measurements only.
 
@@ -145,6 +145,18 @@ correct layout as overlapping. Use seat-to-seat proximity.
 radial order; row spacing preserves radial order but lets arcs harmlessly cross
 in y. Neither is a universal measure — assert on **distance between seats**.
 
+**Never merge two bands that hold different chart rows.** `groupIntoBands` ends
+with a merge pass, and it is easy to reach for depth there — but depth is the
+wrong frame for a curve, which is the whole reason the banding above it is
+radius-based. A short back row nests *beside* the front row: on String
+Orchestra, row 3 at radius 377 shared a median depth with row 0 at 148, the two
+fused into one band, and because row 0 is the anchor that never moves, the last
+row froze with it. Chamber Orchestra collapsed to a single band and nothing
+moved at all. Merging is only ever correct for a group with **no chart row of
+its own** — a freeform chair being adopted — and proximity must be measured in
+**radius**. Two merged rows also move in lockstep, so equal deltas on adjacent
+rows are the tell.
+
 **Straight-row fitting.** Never shrink a straight row's *width* to answer a
 *vertical* overflow. Narrowing cannot fix it, and the loop will collapse the row
 into overlapping chairs.
@@ -277,6 +289,7 @@ raised but not resolved:
 | 5.3.1 | Scoped-slider compounding; row spacing no longer stretches within a row |
 | 5.4.0 | Disabled podium excluded from all exports; user guide + footer link |
 | 5.4.1 | Roster paste now clears that section's shuffle (stale permutation blanked/scrambled pasted names); test suite + design suites merged into the repo |
+| 5.4.2 | Band merging no longer fuses distinct rows: row spacing reaches the last row on String Orchestra and Chamber Orchestra, and adjacent rows fan progressively instead of moving in lockstep; a roster shuffle that no longer matches its roster is dropped at load |
 
 ---
 
