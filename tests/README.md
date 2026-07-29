@@ -33,7 +33,7 @@ red by feeding them a deliberately failing test.
 
 | Count | Kind |
 |---|---|
-| 60 | asserting tests (`RESULT: PASS`/`FAIL`) |
+| 61 | asserting tests (`RESULT: PASS`/`FAIL`) |
 | 29 | investigation scripts — print measurements, no verdict |
 | 6 | JSON chart fixtures |
 

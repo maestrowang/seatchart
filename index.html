@@ -972,7 +972,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.4.2</span>
+        v<span id="appVersion">5.5.0</span>
       </div>
     </div>
   </aside>
@@ -1953,14 +1953,59 @@ function podiumPoint(){
 // instrument, it's a synthetic per-row key instead -- this lets a chart with no
 // instruments at all still support name rosters, grouped naturally by row rather than
 // by section, since there's no instrument grouping to fall back on.
+// Maps seat id -> custom group section key. Rebuilt only when chart.groups actually
+// changes: effectiveSectionKey runs for every seat on every render, and scanning each
+// group's seatIds per seat would be O(seats x groups x members) on the draw path.
+//
+// The cache is validated by the array's identity AND its shape. Identity alone misses
+// a push onto the same array; shape alone misses undo/load swapping in a different
+// chart whose groups happen to have matching counts.
+let groupSectionIndex = null, groupSectionIndexRef = null, groupSectionIndexSig = '';
+function groupSectionIndexFor(){
+  const gs = Array.isArray(chart.groups) ? chart.groups : [];
+  let members = 0;
+  for(const g of gs) members += (g && Array.isArray(g.seatIds)) ? g.seatIds.length : 0;
+  const sig = gs.length + ':' + members;
+  if(groupSectionIndex && groupSectionIndexRef === gs && groupSectionIndexSig === sig) return groupSectionIndex;
+  const index = new Map();
+  // Later groups overwrite earlier ones, so when a seat belongs to several the most
+  // recently saved group owns it -- the newest expressed intent wins, and the rule is
+  // stable rather than depending on which group happens to be looked at first.
+  gs.forEach(g=>{
+    if(!g || !Array.isArray(g.seatIds)) return;
+    g.seatIds.forEach(id=>index.set(id, '__group_' + g.id));
+  });
+  groupSectionIndex = index; groupSectionIndexRef = gs; groupSectionIndexSig = sig;
+  return index;
+}
+
 function effectiveSectionKey(seat){
+  // A custom group outranks the seat's instrument. Rostering a hand-picked set of
+  // chairs is a more specific statement than the instrument they happen to play, and
+  // one key per seat is what the whole roster/rank/shuffle path is built on. The
+  // instrument's own name list is left untouched -- these seats simply stop consuming
+  // ranks from it, so deleting the group puts everything back.
+  const groupKey = groupSectionIndexFor().get(seat.id);
+  if(groupKey) return groupKey;
   if(seat.preset) return seat.preset;
   return '__row_' + seat.row;
 }
 function isRowSectionKey(key){
   return typeof key === 'string' && key.indexOf('__row_') === 0;
 }
+function isGroupSectionKey(key){
+  return typeof key === 'string' && key.indexOf('__group_') === 0;
+}
+function customGroupForKey(key){
+  if(!isGroupSectionKey(key) || !Array.isArray(chart.groups)) return null;
+  const id = key.slice('__group_'.length);
+  return chart.groups.find(g=>g && g.id === id) || null;
+}
 function sectionDisplayName(key){
+  if(isGroupSectionKey(key)){
+    const g = customGroupForKey(key);
+    return g ? `${g.name} (group)` : 'Deleted group';
+  }
   if(isRowSectionKey(key)){
     const rowNum = parseInt(key.slice('__row_'.length), 10);
     return rowNum === -1 ? 'Freeform seats (no instrument)' : `Row ${rowNum + 1} (no instrument)`;
@@ -2041,16 +2086,23 @@ function computeAllSeatRanks(){
 // only 1 seat (which auto-hide, re-evaluated live from current group size each call).
 function computeSeatRanks(){
   const all = computeAllSeatRanks();
+  // Keyed by effective section, so a custom group's badges follow the GROUP's setting
+  // and size rather than those of whatever instruments its members happen to play.
+  // Row keys stay excluded: seats with no instrument have never shown rank badges.
+  const sectionOf = new Map();
+  chart.seats.forEach(s=>{ if(!s.hidden) sectionOf.set(s.id, effectiveSectionKey(s)); });
   const groupSizes = {};
   chart.seats.forEach(s=>{
-    if(s.hidden || !s.preset) return;
-    groupSizes[s.preset] = (groupSizes[s.preset]||0) + 1;
+    const key = sectionOf.get(s.id);
+    if(!key || isRowSectionKey(key)) return;
+    groupSizes[key] = (groupSizes[key]||0) + 1;
   });
   const filtered = new Map();
   chart.seats.forEach(s=>{
-    if(s.hidden || !s.preset || !all.has(s.id)) return;
-    const settings = (chart.seatRankSettings && chart.seatRankSettings[s.preset]) || {};
-    const effectiveHidden = groupSizes[s.preset] <= 1 ? true : !!settings.hidden;
+    const key = sectionOf.get(s.id);
+    if(!key || isRowSectionKey(key) || !all.has(s.id)) return;
+    const settings = (chart.seatRankSettings && chart.seatRankSettings[key]) || {};
+    const effectiveHidden = groupSizes[key] <= 1 ? true : !!settings.hidden;
     if(!effectiveHidden) filtered.set(s.id, all.get(s.id));
   });
   return filtered;
@@ -5363,7 +5415,18 @@ function refreshSeatRankSectionSelect(){
   const sectionSelect = document.getElementById('seatRankSectionSelect');
   const controls = document.getElementById('seatRankSectionControls');
   const noSections = document.getElementById('seatRankNoSections');
-  const names = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
+  // Custom groups are listed too. A mixed group is ranked geometrically -- primary side
+  // first, then front to back -- which can put an outer section ahead of an inner one
+  // (a "front desks" group ranks Cello before Viola because it sits further out).
+  // Invert and Outer-seat-priority are the controls for correcting that, and
+  // computeAllSeatRanks already reads seatRankSettings by section key, so they apply to
+  // a group with no further work. Row keys are excluded: they return before settings
+  // are consulted, so the controls would do nothing.
+  const activeKeys = new Set(chart.seats.filter(s=>!s.hidden).map(s=>effectiveSectionKey(s)));
+  const instrumentNames = sortByPresetOrder([...activeKeys].filter(k=>!isRowSectionKey(k) && !isGroupSectionKey(k)));
+  const groupNames = (Array.isArray(chart.groups) ? chart.groups : [])
+    .map(g=>'__group_' + g.id).filter(k=>activeKeys.has(k));
+  const names = [...instrumentNames, ...groupNames];
   const prevValue = sectionSelect.value;
   sectionSelect.innerHTML = '';
   if(names.length === 0){
@@ -5376,7 +5439,7 @@ function refreshSeatRankSectionSelect(){
   names.forEach(name=>{
     const opt = document.createElement('option');
     opt.value = name;
-    opt.textContent = name;
+    opt.textContent = sectionDisplayName(name);
     sectionSelect.appendChild(opt);
   });
   sectionSelect.value = names.includes(prevValue) ? prevValue : names[0];
@@ -5395,7 +5458,9 @@ function loadSeatRankSectionControls(){
   document.getElementById('seatRankStyle').value = settings.style || 'default';
   document.getElementById('seatRankInvert').checked = !!settings.invert;
   const sectionName = document.getElementById('seatRankSectionSelect').value;
-  const seatCount = chart.seats.filter(s=>!s.hidden && s.preset === sectionName).length;
+  // By effective section, so a group's count reflects its members rather than an
+  // instrument that no longer owns them.
+  const seatCount = chart.seats.filter(s=>!s.hidden && effectiveSectionKey(s) === sectionName).length;
   const hideCheckbox = document.getElementById('seatRankHideSection');
   const autoHideNote = document.getElementById('seatRankAutoHideNote');
   if(seatCount <= 1){
@@ -5418,10 +5483,17 @@ function refreshRosterSectionSelect(){
   const sectionSelect = document.getElementById('rosterSectionSelect');
   const content = document.getElementById('rosterSectionContent');
   const noSections = document.getElementById('rosterNoSections');
-  const instrumentKeys = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
-  const rowKeys = [...new Set(chart.seats.filter(s=>!s.hidden && !s.preset).map(s=>effectiveSectionKey(s)))]
+  // Derived from effectiveSectionKey rather than from s.preset, so a section whose
+  // seats have all been absorbed into a custom group stops being offered -- listing it
+  // would show a roster with nowhere to put the names.
+  const activeKeys = new Set(chart.seats.filter(s=>!s.hidden).map(s=>effectiveSectionKey(s)));
+  const instrumentKeys = sortByPresetOrder([...activeKeys].filter(k=>!isRowSectionKey(k) && !isGroupSectionKey(k)));
+  // Creation order, which is the order the Groups panel shows them in.
+  const groupKeys = (Array.isArray(chart.groups) ? chart.groups : [])
+    .map(g=>'__group_' + g.id).filter(k=>activeKeys.has(k));
+  const rowKeys = [...activeKeys].filter(isRowSectionKey)
     .sort((a,b)=> parseInt(a.slice(6),10) - parseInt(b.slice(6),10));
-  const keys = [...instrumentKeys, ...rowKeys];
+  const keys = [...instrumentKeys, ...groupKeys, ...rowKeys];
   const prevValue = sectionSelect.value;
   sectionSelect.innerHTML = '';
   if(keys.length === 0){
@@ -5848,6 +5920,22 @@ function refreshAutoGroupList(){
 
 // Renders user-created custom groups (chart.groups); stale seat ids -- e.g. from a
 // deleted seat -- are simply filtered out at display/selection time.
+// Removes a custom group and the roster that belonged to it. Its members fall back to
+// their instrument (or row) section, so the chart re-derives names on the next draw.
+// The roster is discarded rather than kept: group ids are freshly generated, so a
+// recreated group of the same name would never find these names again, leaving them as
+// dead weight in every saved file. pushHistory has already run, so undo restores them.
+function deleteCustomGroup(groupId){
+  chart.groups = chart.groups.filter(x=>x.id !== groupId);
+  const key = '__group_' + groupId;
+  if(chart.rosters) delete chart.rosters[key];
+  if(chart.rosterShuffle) delete chart.rosterShuffle[key];
+  if(chart.seatRankSettings) delete chart.seatRankSettings[key];
+  refreshCustomGroupList();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
+  render();
+}
+
 function refreshCustomGroupList(){
   const listEl = document.getElementById('customGroupList');
   const sectionEl = document.getElementById('customGroupSection');
@@ -5873,8 +5961,7 @@ function refreshCustomGroupList(){
     delBtn.textContent = '✕'; delBtn.className = 'danger';
     delBtn.onclick = ()=>{
       pushHistory();
-      chart.groups = chart.groups.filter(x=>x.id !== g.id);
-      refreshCustomGroupList();
+      deleteCustomGroup(g.id);
     };
     row.appendChild(nameSpan);
     row.appendChild(delBtn);
@@ -5904,8 +5991,7 @@ function refreshCustomGroupList(){
   delBtn.textContent = '✕'; delBtn.className = 'danger';
   delBtn.onclick = ()=>{
     pushHistory();
-    chart.groups = chart.groups.filter(x=>x.id !== select.value);
-    refreshCustomGroupList();
+    deleteCustomGroup(select.value);
   };
   row.appendChild(select);
   row.appendChild(selectBtn);
@@ -5921,6 +6007,11 @@ document.getElementById('saveAsGroupBtn').onclick = ()=>{
     if(!Array.isArray(chart.groups)) chart.groups = [];
     chart.groups.push({ id: uid(), name, seatIds: selectedIds });
     refreshCustomGroupList();
+    // The group is now a roster section in its own right, and it has just taken these
+    // seats away from their instrument sections, so both the panel and the chart's
+    // names need re-deriving.
+    if(rosterPanelOpen) refreshRosterSectionSelect();
+    render();
     toast('Group "'+name+'" saved');
   });
 };

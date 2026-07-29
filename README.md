@@ -196,6 +196,28 @@ You can also select any set of seats and use **Save Selection as Group...** to
 name it and keep it for later. Groups expand into view automatically once you
 have any.
 
+### Rostering a group
+
+A saved group appears in the **Roster** panel's section dropdown as
+"*Name* (group)", so you can paste names, shuffle, revert and edit names on the
+chart for a hand-picked set of chairs -- a front-desk group, a chamber subset, a
+sectional -- exactly as you would for an instrument.
+
+A group takes priority over its members' instruments: while the group exists,
+those chairs get their names from the group's list rather than from Violin 1,
+Cello and so on. The instrument's own list is not deleted -- those seats simply
+stop drawing from it, so any names past the remaining seat count show as
+unassigned, and deleting the group puts everything back. If a seat is in more
+than one group, the most recently saved group wins.
+
+Names are assigned by *rank*, and ranking within a group is positional: the
+fuller side of the stage first, then front to back, then outward-in within each
+row. Instruments stay together in practice, but a group spanning both sides
+ranks by where chairs sit rather than by score order -- a front-desk group will
+rank Cello ahead of Viola, because it sits further out. Use **Invert** or
+**Outer seat priority** under *Show seat rank numbers* (groups are listed there
+too), or just drag names in the roster list into the order you want.
+
 ---
 
 ## View options
