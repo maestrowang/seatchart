@@ -972,7 +972,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.5.0</span>
+        v<span id="appVersion">5.6.0</span>
       </div>
     </div>
   </aside>
@@ -1094,7 +1094,12 @@ const PRESETS = [
     ['Cello','Vc','#79CC3E'],['Bass','Bs','#CC6E3E'],
   ]},
   {group:'Other', items:[
-    ['Piano','Pno','#121212'],['Clavinova','Clav','#5ECC3E'],['Harp','Hrp','#3ECC61'],['Vocal','Voc','#8ACC3E'],['Custom','',"#888888"],
+    ['Piano','Pno','#121212'],['Clavinova','Clav','#5ECC3E'],['Harp','Hrp','#3ECC61'],['Vocal','Voc','#8ACC3E'],
+    // A catch-all for a percussion block rostered as one section, rather than naming
+    // each instrument. Neutral dark grey so it reads as a section rather than competing
+    // with the specific percussion colours above.
+    ['Percussion (generic)','Perc','#5F6368'],
+    ['Custom','',"#888888"],
   ]},
 ];
 
@@ -1235,6 +1240,10 @@ let dragOffset = { x: 0, y: 0 };
 let draggingStandKey = null;
 let standDragMoved = false;
 let standDragOffset = { x: 0, y: 0 };
+// A stand stays selected after the click that grabbed it, so Delete/Backspace has
+// something to act on. Dragging alone never left anything selected, which is why a
+// stand could be moved but not removed from the keyboard.
+let selectedStandKey = null;
 
 // podium: drag-to-move, plain click toggles it on/off
 let draggingPodium = false;
@@ -2023,11 +2032,14 @@ function computeAllSeatRanks(){
   });
   const cx = canvas.width/2;
 
-  function orderForSide(sideSeats, isLeft, style, innerFirst){
+  function orderForSide(sideSeats, isLeft, style, innerFirst, straightAcross){
     const byRow = {};
     sideSeats.forEach(s=>{ (byRow[s.row] = byRow[s.row] || []).push(s); });
     const rowIndices = Object.keys(byRow).map(Number).sort((a,b)=>a-b);
     const rowsOrdered = rowIndices.map(r=>{
+      // A section that owns its whole span reads left to right, like any list.
+      // Centre-out only makes sense for a section that IS one half of a row.
+      if(straightAcross) return byRow[r].slice().sort((a,b)=>a.x-b.x);
       // Baseline is outer-to-inner: for the left half that's ascending x (farthest-left
       // first); for the right half that's descending x (farthest-right first). Straight
       // rows use the opposite convention -- seats closer to center rank first, matching
@@ -2068,13 +2080,24 @@ function computeAllSeatRanks(){
     // convention. Seats' EFFECTIVE shape (accounting for the custom straight/curved
     // toggle) is what's checked, not just the row's original shape.
     const innerFirst = groupSeats.every(s => rowShapeOf(s) === 'straight');
-    const left = groupSeats.filter(s=>s.x < cx);
-    const right = groupSeats.filter(s=>s.x >= cx);
-    const primaryIsLeft = left.length >= right.length;
-    const order = [
-      ...orderForSide(primaryIsLeft ? left : right, primaryIsLeft, style, innerFirst),
-      ...orderForSide(primaryIsLeft ? right : left, !primaryIsLeft, style, innerFirst),
-    ];
+    // Splitting a section at the centre line only means something when the section is
+    // one HALF of a row -- Violin 1 on the left, Violin 2 on the right, each ranking
+    // from the centre outward. A section that reaches across the centre owns that span,
+    // and should read straight across like any list.
+    //
+    // The tolerance matters: a seat sitting exactly on the centre line belongs to
+    // whichever side its section is on, not automatically to the right. Counting it as
+    // "right" split Clarinet -- 7 seats left of centre plus 2 sitting exactly on it --
+    // into a 7-seat side and a 2-seat side, so the two centre chairs ranked 8th and 9th
+    // instead of 4th and 9th.
+    const CENTRE_EPS = 0.5;
+    const hasLeft  = groupSeats.some(s => s.x < cx - CENTRE_EPS);
+    const hasRight = groupSeats.some(s => s.x > cx + CENTRE_EPS);
+    const order = (hasLeft && hasRight)
+      ? orderForSide(groupSeats, true, style, innerFirst, true)
+      // One-sided (or entirely on the centre line): keep the half-of-a-row convention,
+      // with any centre seats ranking as part of that side.
+      : orderForSide(groupSeats, !hasRight, style, innerFirst, false);
     const finalOrder = invert ? order.slice().reverse() : order;
     finalOrder.forEach((s,i)=> ranks.set(s.id, i+1));
   });
@@ -3114,6 +3137,49 @@ function drawPodium(){
   ctx.restore();
 }
 
+// A selected stand needs to look selected -- without it there is no way to tell what
+// Delete is about to remove. Suppressed during export, like every other selection cue.
+// Removes the selected music stand. A solo stand simply turns off; a shared stand is
+// unlinked and both chairs lose it, because the stand being deleted IS the shared one --
+// leaving two stands behind would be adding stands, not deleting one. Use the Link
+// Stand Partners tool to unlink while keeping stands.
+//
+// The stored offset is dropped too, so a stand added back later starts from its natural
+// position rather than inheriting a stale hand-dragged one.
+function deleteSelectedStand(){
+  const key = selectedStandKey;
+  if(!key) return;
+  pushHistory();
+  if(key.indexOf('pair:') === 0){
+    const [a, b] = key.slice('pair:'.length).split('_');
+    [a, b].forEach(id=>{
+      const seat = getSeat(id);
+      if(seat){ seat.standPartner = null; seat.stand = false; }
+      delete chart.standPositions[standKeySolo(id)];
+    });
+  } else if(key.indexOf('solo:') === 0){
+    const seat = getSeat(key.slice('solo:'.length));
+    if(seat) seat.stand = false;
+  }
+  delete chart.standPositions[key];
+  selectedStandKey = null;
+  refreshSelectionUI();
+  render();
+}
+
+function drawStandSelectionRing(x, y, r){
+  if(isExporting) return;
+  const p = flipPoint(x, y);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, standHitRadius(), 0, Math.PI*2);
+  ctx.strokeStyle = '#2F6FEB';
+  ctx.lineWidth = Math.max(2, r*0.10);
+  ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawStandIcon(x, y, ux, uy, r, trayColor){
   // ux,uy = unit vector pointing from the stand toward the podium.
   // The tray's face is perpendicular to that line, so it always reads as facing the podium.
@@ -3793,6 +3859,7 @@ function render(){
         const pos = standAbsolutePos(key);
         const dir = standFaceDir(seat, partner);
         drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+        if(key === selectedStandKey) drawStandSelectionRing(pos.x, pos.y, r);
       } else if(seat.stand){
         const key = standKeySolo(seat.id);
         ensureStandOffset(key, seat);
@@ -3800,6 +3867,7 @@ function render(){
         const pos = standAbsolutePos(key);
         const dir = standFaceDir(seat);
         drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+        if(key === selectedStandKey) drawStandSelectionRing(pos.x, pos.y, r);
       }
     });
   }
@@ -4393,6 +4461,9 @@ function setSelection(ids){
   if(selectedId) lastInteractedSeatId = selectedId;
   podiumSelected = false;
   selectedTextBoxId = null;
+  // Only one thing on the chart is selected at a time, so picking seats releases any
+  // stand -- otherwise Delete would have two candidates and pick the wrong one.
+  selectedStandKey = null;
   // A frozen gesture snapshot is only valid for the selection it was captured
   // under, so any selection change discards it and forces a fresh capture.
   spacingGesture = null;
@@ -4831,6 +4902,12 @@ canvas.addEventListener('mousedown', e=>{
 
   const standKey = findStandAt(x,y);
   if(standKey){
+    // Selecting a stand clears the seat/text-box selection, so Delete is never
+    // ambiguous about what it is about to remove.
+    if(selection.size) setSelection([]);
+    selectedTextBoxId = null;
+    selectedStandKey = standKey;
+    refreshSelectionUI();
     draggingStandKey = standKey;
     standDragMoved = false;
     { const base = getStandBase(standKey);
@@ -5769,7 +5846,14 @@ window.addEventListener('keydown', e=>{
     const overlay = document.getElementById('confirmOverlay');
     if(overlay.classList.contains('show')){ hideConfirm(); return; }
     if(mode !== null){ mode = null; linkFirst = null; updateModeUI(document.getElementById('addChairTool')); }
+    // Escape deselects rather than deletes, matching what it does everywhere else here.
+    if(selectedStandKey){ selectedStandKey = null; refreshSelectionUI(); render(); return; }
     clearSelection();
+    return;
+  }
+  if((e.key === 'Delete' || e.key === 'Backspace') && selectedStandKey){
+    e.preventDefault();
+    deleteSelectedStand();
     return;
   }
   if((e.key === 'Delete' || e.key === 'Backspace') && selectedTextBoxId){

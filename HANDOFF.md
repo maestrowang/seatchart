@@ -1,7 +1,7 @@
 # Seating Chart Studio — Engineering Handoff
 
 Written for a fresh agent or developer picking this up cold.
-Current app version: **5.5.0**. Test suite: **90 files, all passing** — 61 of
+Current app version: **5.6.0**. Test suite: **91 files, all passing** — 62 of
 them assert a `RESULT:` verdict, the other 29 are investigation scripts that
 print measurements only.
 
@@ -161,6 +161,17 @@ rows are the tell.
 *vertical* overflow. Narrowing cannot fix it, and the loop will collapse the row
 into overlapping chairs.
 
+**The centre line splits a section only when the section is half a row.**
+Ranking divides a section at `cx` because the convention it encodes is Violin 1
+on the left and Violin 2 on the right, each counting from the centre outward.
+Two things follow. A seat sitting *exactly* on `cx` must not be forced to the
+right — `s.x >= cx` did that, and Clarinet (7 chairs left of centre, 2 on it)
+had its two centre chairs ranked 8th and 9th instead of 4th and 9th, because
+they were treated as a whole second side that sorts after the first. And a
+section that genuinely reaches across the centre is not half of anything: it
+owns that span and reads straight across, so centre-out is wrong for it. Judge
+with a tolerance (`CENTRE_EPS`), not `>=`.
+
 **One section key per seat — `effectiveSectionKey` is the only authority.**
 Rosters, ranks, shuffles and inline edits all key off it, and every one of them
 assumes a seat belongs to exactly one section. Precedence is custom group →
@@ -304,6 +315,7 @@ raised but not resolved:
 | 5.4.1 | Roster paste now clears that section's shuffle (stale permutation blanked/scrambled pasted names); test suite + design suites merged into the repo |
 | 5.4.2 | Band merging no longer fuses distinct rows: row spacing reaches the last row on String Orchestra and Chamber Orchestra, and adjacent rows fan progressively instead of moving in lockstep; a roster shuffle that no longer matches its roster is dropped at load |
 | 5.5.0 | Custom groups are selectable roster sections (names, shuffle, revert, inline edit) and appear in the rank-order controls; a group outranks its members' instruments |
+| 5.6.0 | Ranking no longer splits a section at the centre line: seats sitting exactly on centre rank with their own side, and a section spanning the centre reads straight across instead of centre-out. Adds the "Percussion (generic)" preset, and music stands can be selected and removed with Delete/Backspace |
 
 ---
 
