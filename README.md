@@ -145,6 +145,11 @@ the app telling you it has run out of room, not a glitch.
 - **Link Stand Partners** -- click two seats to have them share a music stand.
   Clicking the same pair again unlinks them. If you later delete one of a linked
   pair, the survivor keeps a stand of its own.
+- **Removing a stand** -- click a music stand on the chart to select it, then
+  press **Delete** or **Backspace**. A shared stand is unlinked and removed from
+  both chairs; use **Link Stand Partners** instead if you want to unlink but keep
+  a stand each. **Escape** deselects without deleting, and **Undo** brings a
+  removed stand back.
 - **Text Box** -- click anywhere to place free text. Double-click it to edit on
   the chart; press Enter for a new line. While selected you get font size,
   **bold**, *italic*, underline, and left / centre / right alignment. Drag to
@@ -161,6 +166,12 @@ The **Roster** button sits at the top right of the screen.
 Rosters attach player names to seats by *rank* -- the first name goes to the
 first chair, and so on. Ranking follows normal seating convention: curved rows
 rank from the outside in, straight rows from the centre out.
+
+That centre-out convention assumes a section is one *half* of a row -- Violin 1
+on the left, Violin 2 on the right, each counting outward from the middle. A
+section that stretches across the centre of the stage instead owns that whole
+span, so it is ranked straight across, left to right. A chair sitting exactly on
+the centre line counts as part of its own section's side.
 
 1. Open the Roster panel and pick a section from the dropdown.
 2. Click **Paste / Edit Names** and paste a list, one name per line. Pasting
@@ -195,6 +206,28 @@ count, and lets you select a whole section in one click.
 You can also select any set of seats and use **Save Selection as Group...** to
 name it and keep it for later. Groups expand into view automatically once you
 have any.
+
+### Rostering a group
+
+A saved group appears in the **Roster** panel's section dropdown as
+"*Name* (group)", so you can paste names, shuffle, revert and edit names on the
+chart for a hand-picked set of chairs -- a front-desk group, a chamber subset, a
+sectional -- exactly as you would for an instrument.
+
+A group takes priority over its members' instruments: while the group exists,
+those chairs get their names from the group's list rather than from Violin 1,
+Cello and so on. The instrument's own list is not deleted -- those seats simply
+stop drawing from it, so any names past the remaining seat count show as
+unassigned, and deleting the group puts everything back. If a seat is in more
+than one group, the most recently saved group wins.
+
+Names are assigned by *rank*, and ranking within a group is positional: the
+fuller side of the stage first, then front to back, then outward-in within each
+row. Instruments stay together in practice, but a group spanning both sides
+ranks by where chairs sit rather than by score order -- a front-desk group will
+rank Cello ahead of Viola, because it sits further out. Use **Invert** or
+**Outer seat priority** under *Show seat rank numbers* (groups are listed there
+too), or just drag names in the roster list into the order you want.
 
 ---
 

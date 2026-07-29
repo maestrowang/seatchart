@@ -972,7 +972,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       </div>
       <div class="empty-hint" style="display:block; text-align:center;">
         &copy; <span id="appCopyrightYear">2026</span> by maestrowang<br>
-        v<span id="appVersion">5.4.2</span>
+        v<span id="appVersion">5.6.0</span>
       </div>
     </div>
   </aside>
@@ -1094,7 +1094,12 @@ const PRESETS = [
     ['Cello','Vc','#79CC3E'],['Bass','Bs','#CC6E3E'],
   ]},
   {group:'Other', items:[
-    ['Piano','Pno','#121212'],['Clavinova','Clav','#5ECC3E'],['Harp','Hrp','#3ECC61'],['Vocal','Voc','#8ACC3E'],['Custom','',"#888888"],
+    ['Piano','Pno','#121212'],['Clavinova','Clav','#5ECC3E'],['Harp','Hrp','#3ECC61'],['Vocal','Voc','#8ACC3E'],
+    // A catch-all for a percussion block rostered as one section, rather than naming
+    // each instrument. Neutral dark grey so it reads as a section rather than competing
+    // with the specific percussion colours above.
+    ['Percussion (generic)','Perc','#5F6368'],
+    ['Custom','',"#888888"],
   ]},
 ];
 
@@ -1235,6 +1240,10 @@ let dragOffset = { x: 0, y: 0 };
 let draggingStandKey = null;
 let standDragMoved = false;
 let standDragOffset = { x: 0, y: 0 };
+// A stand stays selected after the click that grabbed it, so Delete/Backspace has
+// something to act on. Dragging alone never left anything selected, which is why a
+// stand could be moved but not removed from the keyboard.
+let selectedStandKey = null;
 
 // podium: drag-to-move, plain click toggles it on/off
 let draggingPodium = false;
@@ -1953,14 +1962,59 @@ function podiumPoint(){
 // instrument, it's a synthetic per-row key instead -- this lets a chart with no
 // instruments at all still support name rosters, grouped naturally by row rather than
 // by section, since there's no instrument grouping to fall back on.
+// Maps seat id -> custom group section key. Rebuilt only when chart.groups actually
+// changes: effectiveSectionKey runs for every seat on every render, and scanning each
+// group's seatIds per seat would be O(seats x groups x members) on the draw path.
+//
+// The cache is validated by the array's identity AND its shape. Identity alone misses
+// a push onto the same array; shape alone misses undo/load swapping in a different
+// chart whose groups happen to have matching counts.
+let groupSectionIndex = null, groupSectionIndexRef = null, groupSectionIndexSig = '';
+function groupSectionIndexFor(){
+  const gs = Array.isArray(chart.groups) ? chart.groups : [];
+  let members = 0;
+  for(const g of gs) members += (g && Array.isArray(g.seatIds)) ? g.seatIds.length : 0;
+  const sig = gs.length + ':' + members;
+  if(groupSectionIndex && groupSectionIndexRef === gs && groupSectionIndexSig === sig) return groupSectionIndex;
+  const index = new Map();
+  // Later groups overwrite earlier ones, so when a seat belongs to several the most
+  // recently saved group owns it -- the newest expressed intent wins, and the rule is
+  // stable rather than depending on which group happens to be looked at first.
+  gs.forEach(g=>{
+    if(!g || !Array.isArray(g.seatIds)) return;
+    g.seatIds.forEach(id=>index.set(id, '__group_' + g.id));
+  });
+  groupSectionIndex = index; groupSectionIndexRef = gs; groupSectionIndexSig = sig;
+  return index;
+}
+
 function effectiveSectionKey(seat){
+  // A custom group outranks the seat's instrument. Rostering a hand-picked set of
+  // chairs is a more specific statement than the instrument they happen to play, and
+  // one key per seat is what the whole roster/rank/shuffle path is built on. The
+  // instrument's own name list is left untouched -- these seats simply stop consuming
+  // ranks from it, so deleting the group puts everything back.
+  const groupKey = groupSectionIndexFor().get(seat.id);
+  if(groupKey) return groupKey;
   if(seat.preset) return seat.preset;
   return '__row_' + seat.row;
 }
 function isRowSectionKey(key){
   return typeof key === 'string' && key.indexOf('__row_') === 0;
 }
+function isGroupSectionKey(key){
+  return typeof key === 'string' && key.indexOf('__group_') === 0;
+}
+function customGroupForKey(key){
+  if(!isGroupSectionKey(key) || !Array.isArray(chart.groups)) return null;
+  const id = key.slice('__group_'.length);
+  return chart.groups.find(g=>g && g.id === id) || null;
+}
 function sectionDisplayName(key){
+  if(isGroupSectionKey(key)){
+    const g = customGroupForKey(key);
+    return g ? `${g.name} (group)` : 'Deleted group';
+  }
   if(isRowSectionKey(key)){
     const rowNum = parseInt(key.slice('__row_'.length), 10);
     return rowNum === -1 ? 'Freeform seats (no instrument)' : `Row ${rowNum + 1} (no instrument)`;
@@ -1978,11 +2032,14 @@ function computeAllSeatRanks(){
   });
   const cx = canvas.width/2;
 
-  function orderForSide(sideSeats, isLeft, style, innerFirst){
+  function orderForSide(sideSeats, isLeft, style, innerFirst, straightAcross){
     const byRow = {};
     sideSeats.forEach(s=>{ (byRow[s.row] = byRow[s.row] || []).push(s); });
     const rowIndices = Object.keys(byRow).map(Number).sort((a,b)=>a-b);
     const rowsOrdered = rowIndices.map(r=>{
+      // A section that owns its whole span reads left to right, like any list.
+      // Centre-out only makes sense for a section that IS one half of a row.
+      if(straightAcross) return byRow[r].slice().sort((a,b)=>a.x-b.x);
       // Baseline is outer-to-inner: for the left half that's ascending x (farthest-left
       // first); for the right half that's descending x (farthest-right first). Straight
       // rows use the opposite convention -- seats closer to center rank first, matching
@@ -2023,13 +2080,24 @@ function computeAllSeatRanks(){
     // convention. Seats' EFFECTIVE shape (accounting for the custom straight/curved
     // toggle) is what's checked, not just the row's original shape.
     const innerFirst = groupSeats.every(s => rowShapeOf(s) === 'straight');
-    const left = groupSeats.filter(s=>s.x < cx);
-    const right = groupSeats.filter(s=>s.x >= cx);
-    const primaryIsLeft = left.length >= right.length;
-    const order = [
-      ...orderForSide(primaryIsLeft ? left : right, primaryIsLeft, style, innerFirst),
-      ...orderForSide(primaryIsLeft ? right : left, !primaryIsLeft, style, innerFirst),
-    ];
+    // Splitting a section at the centre line only means something when the section is
+    // one HALF of a row -- Violin 1 on the left, Violin 2 on the right, each ranking
+    // from the centre outward. A section that reaches across the centre owns that span,
+    // and should read straight across like any list.
+    //
+    // The tolerance matters: a seat sitting exactly on the centre line belongs to
+    // whichever side its section is on, not automatically to the right. Counting it as
+    // "right" split Clarinet -- 7 seats left of centre plus 2 sitting exactly on it --
+    // into a 7-seat side and a 2-seat side, so the two centre chairs ranked 8th and 9th
+    // instead of 4th and 9th.
+    const CENTRE_EPS = 0.5;
+    const hasLeft  = groupSeats.some(s => s.x < cx - CENTRE_EPS);
+    const hasRight = groupSeats.some(s => s.x > cx + CENTRE_EPS);
+    const order = (hasLeft && hasRight)
+      ? orderForSide(groupSeats, true, style, innerFirst, true)
+      // One-sided (or entirely on the centre line): keep the half-of-a-row convention,
+      // with any centre seats ranking as part of that side.
+      : orderForSide(groupSeats, !hasRight, style, innerFirst, false);
     const finalOrder = invert ? order.slice().reverse() : order;
     finalOrder.forEach((s,i)=> ranks.set(s.id, i+1));
   });
@@ -2041,16 +2109,23 @@ function computeAllSeatRanks(){
 // only 1 seat (which auto-hide, re-evaluated live from current group size each call).
 function computeSeatRanks(){
   const all = computeAllSeatRanks();
+  // Keyed by effective section, so a custom group's badges follow the GROUP's setting
+  // and size rather than those of whatever instruments its members happen to play.
+  // Row keys stay excluded: seats with no instrument have never shown rank badges.
+  const sectionOf = new Map();
+  chart.seats.forEach(s=>{ if(!s.hidden) sectionOf.set(s.id, effectiveSectionKey(s)); });
   const groupSizes = {};
   chart.seats.forEach(s=>{
-    if(s.hidden || !s.preset) return;
-    groupSizes[s.preset] = (groupSizes[s.preset]||0) + 1;
+    const key = sectionOf.get(s.id);
+    if(!key || isRowSectionKey(key)) return;
+    groupSizes[key] = (groupSizes[key]||0) + 1;
   });
   const filtered = new Map();
   chart.seats.forEach(s=>{
-    if(s.hidden || !s.preset || !all.has(s.id)) return;
-    const settings = (chart.seatRankSettings && chart.seatRankSettings[s.preset]) || {};
-    const effectiveHidden = groupSizes[s.preset] <= 1 ? true : !!settings.hidden;
+    const key = sectionOf.get(s.id);
+    if(!key || isRowSectionKey(key) || !all.has(s.id)) return;
+    const settings = (chart.seatRankSettings && chart.seatRankSettings[key]) || {};
+    const effectiveHidden = groupSizes[key] <= 1 ? true : !!settings.hidden;
     if(!effectiveHidden) filtered.set(s.id, all.get(s.id));
   });
   return filtered;
@@ -3062,6 +3137,49 @@ function drawPodium(){
   ctx.restore();
 }
 
+// A selected stand needs to look selected -- without it there is no way to tell what
+// Delete is about to remove. Suppressed during export, like every other selection cue.
+// Removes the selected music stand. A solo stand simply turns off; a shared stand is
+// unlinked and both chairs lose it, because the stand being deleted IS the shared one --
+// leaving two stands behind would be adding stands, not deleting one. Use the Link
+// Stand Partners tool to unlink while keeping stands.
+//
+// The stored offset is dropped too, so a stand added back later starts from its natural
+// position rather than inheriting a stale hand-dragged one.
+function deleteSelectedStand(){
+  const key = selectedStandKey;
+  if(!key) return;
+  pushHistory();
+  if(key.indexOf('pair:') === 0){
+    const [a, b] = key.slice('pair:'.length).split('_');
+    [a, b].forEach(id=>{
+      const seat = getSeat(id);
+      if(seat){ seat.standPartner = null; seat.stand = false; }
+      delete chart.standPositions[standKeySolo(id)];
+    });
+  } else if(key.indexOf('solo:') === 0){
+    const seat = getSeat(key.slice('solo:'.length));
+    if(seat) seat.stand = false;
+  }
+  delete chart.standPositions[key];
+  selectedStandKey = null;
+  refreshSelectionUI();
+  render();
+}
+
+function drawStandSelectionRing(x, y, r){
+  if(isExporting) return;
+  const p = flipPoint(x, y);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, standHitRadius(), 0, Math.PI*2);
+  ctx.strokeStyle = '#2F6FEB';
+  ctx.lineWidth = Math.max(2, r*0.10);
+  ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawStandIcon(x, y, ux, uy, r, trayColor){
   // ux,uy = unit vector pointing from the stand toward the podium.
   // The tray's face is perpendicular to that line, so it always reads as facing the podium.
@@ -3741,6 +3859,7 @@ function render(){
         const pos = standAbsolutePos(key);
         const dir = standFaceDir(seat, partner);
         drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+        if(key === selectedStandKey) drawStandSelectionRing(pos.x, pos.y, r);
       } else if(seat.stand){
         const key = standKeySolo(seat.id);
         ensureStandOffset(key, seat);
@@ -3748,6 +3867,7 @@ function render(){
         const pos = standAbsolutePos(key);
         const dir = standFaceDir(seat);
         drawStandIcon(pos.x, pos.y, dir.ux, dir.uy, r);
+        if(key === selectedStandKey) drawStandSelectionRing(pos.x, pos.y, r);
       }
     });
   }
@@ -4341,6 +4461,9 @@ function setSelection(ids){
   if(selectedId) lastInteractedSeatId = selectedId;
   podiumSelected = false;
   selectedTextBoxId = null;
+  // Only one thing on the chart is selected at a time, so picking seats releases any
+  // stand -- otherwise Delete would have two candidates and pick the wrong one.
+  selectedStandKey = null;
   // A frozen gesture snapshot is only valid for the selection it was captured
   // under, so any selection change discards it and forces a fresh capture.
   spacingGesture = null;
@@ -4779,6 +4902,12 @@ canvas.addEventListener('mousedown', e=>{
 
   const standKey = findStandAt(x,y);
   if(standKey){
+    // Selecting a stand clears the seat/text-box selection, so Delete is never
+    // ambiguous about what it is about to remove.
+    if(selection.size) setSelection([]);
+    selectedTextBoxId = null;
+    selectedStandKey = standKey;
+    refreshSelectionUI();
     draggingStandKey = standKey;
     standDragMoved = false;
     { const base = getStandBase(standKey);
@@ -5363,7 +5492,18 @@ function refreshSeatRankSectionSelect(){
   const sectionSelect = document.getElementById('seatRankSectionSelect');
   const controls = document.getElementById('seatRankSectionControls');
   const noSections = document.getElementById('seatRankNoSections');
-  const names = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
+  // Custom groups are listed too. A mixed group is ranked geometrically -- primary side
+  // first, then front to back -- which can put an outer section ahead of an inner one
+  // (a "front desks" group ranks Cello before Viola because it sits further out).
+  // Invert and Outer-seat-priority are the controls for correcting that, and
+  // computeAllSeatRanks already reads seatRankSettings by section key, so they apply to
+  // a group with no further work. Row keys are excluded: they return before settings
+  // are consulted, so the controls would do nothing.
+  const activeKeys = new Set(chart.seats.filter(s=>!s.hidden).map(s=>effectiveSectionKey(s)));
+  const instrumentNames = sortByPresetOrder([...activeKeys].filter(k=>!isRowSectionKey(k) && !isGroupSectionKey(k)));
+  const groupNames = (Array.isArray(chart.groups) ? chart.groups : [])
+    .map(g=>'__group_' + g.id).filter(k=>activeKeys.has(k));
+  const names = [...instrumentNames, ...groupNames];
   const prevValue = sectionSelect.value;
   sectionSelect.innerHTML = '';
   if(names.length === 0){
@@ -5376,7 +5516,7 @@ function refreshSeatRankSectionSelect(){
   names.forEach(name=>{
     const opt = document.createElement('option');
     opt.value = name;
-    opt.textContent = name;
+    opt.textContent = sectionDisplayName(name);
     sectionSelect.appendChild(opt);
   });
   sectionSelect.value = names.includes(prevValue) ? prevValue : names[0];
@@ -5395,7 +5535,9 @@ function loadSeatRankSectionControls(){
   document.getElementById('seatRankStyle').value = settings.style || 'default';
   document.getElementById('seatRankInvert').checked = !!settings.invert;
   const sectionName = document.getElementById('seatRankSectionSelect').value;
-  const seatCount = chart.seats.filter(s=>!s.hidden && s.preset === sectionName).length;
+  // By effective section, so a group's count reflects its members rather than an
+  // instrument that no longer owns them.
+  const seatCount = chart.seats.filter(s=>!s.hidden && effectiveSectionKey(s) === sectionName).length;
   const hideCheckbox = document.getElementById('seatRankHideSection');
   const autoHideNote = document.getElementById('seatRankAutoHideNote');
   if(seatCount <= 1){
@@ -5418,10 +5560,17 @@ function refreshRosterSectionSelect(){
   const sectionSelect = document.getElementById('rosterSectionSelect');
   const content = document.getElementById('rosterSectionContent');
   const noSections = document.getElementById('rosterNoSections');
-  const instrumentKeys = sortByPresetOrder([...new Set(chart.seats.filter(s=>!s.hidden && s.preset).map(s=>s.preset))]);
-  const rowKeys = [...new Set(chart.seats.filter(s=>!s.hidden && !s.preset).map(s=>effectiveSectionKey(s)))]
+  // Derived from effectiveSectionKey rather than from s.preset, so a section whose
+  // seats have all been absorbed into a custom group stops being offered -- listing it
+  // would show a roster with nowhere to put the names.
+  const activeKeys = new Set(chart.seats.filter(s=>!s.hidden).map(s=>effectiveSectionKey(s)));
+  const instrumentKeys = sortByPresetOrder([...activeKeys].filter(k=>!isRowSectionKey(k) && !isGroupSectionKey(k)));
+  // Creation order, which is the order the Groups panel shows them in.
+  const groupKeys = (Array.isArray(chart.groups) ? chart.groups : [])
+    .map(g=>'__group_' + g.id).filter(k=>activeKeys.has(k));
+  const rowKeys = [...activeKeys].filter(isRowSectionKey)
     .sort((a,b)=> parseInt(a.slice(6),10) - parseInt(b.slice(6),10));
-  const keys = [...instrumentKeys, ...rowKeys];
+  const keys = [...instrumentKeys, ...groupKeys, ...rowKeys];
   const prevValue = sectionSelect.value;
   sectionSelect.innerHTML = '';
   if(keys.length === 0){
@@ -5697,7 +5846,14 @@ window.addEventListener('keydown', e=>{
     const overlay = document.getElementById('confirmOverlay');
     if(overlay.classList.contains('show')){ hideConfirm(); return; }
     if(mode !== null){ mode = null; linkFirst = null; updateModeUI(document.getElementById('addChairTool')); }
+    // Escape deselects rather than deletes, matching what it does everywhere else here.
+    if(selectedStandKey){ selectedStandKey = null; refreshSelectionUI(); render(); return; }
     clearSelection();
+    return;
+  }
+  if((e.key === 'Delete' || e.key === 'Backspace') && selectedStandKey){
+    e.preventDefault();
+    deleteSelectedStand();
     return;
   }
   if((e.key === 'Delete' || e.key === 'Backspace') && selectedTextBoxId){
@@ -5848,6 +6004,22 @@ function refreshAutoGroupList(){
 
 // Renders user-created custom groups (chart.groups); stale seat ids -- e.g. from a
 // deleted seat -- are simply filtered out at display/selection time.
+// Removes a custom group and the roster that belonged to it. Its members fall back to
+// their instrument (or row) section, so the chart re-derives names on the next draw.
+// The roster is discarded rather than kept: group ids are freshly generated, so a
+// recreated group of the same name would never find these names again, leaving them as
+// dead weight in every saved file. pushHistory has already run, so undo restores them.
+function deleteCustomGroup(groupId){
+  chart.groups = chart.groups.filter(x=>x.id !== groupId);
+  const key = '__group_' + groupId;
+  if(chart.rosters) delete chart.rosters[key];
+  if(chart.rosterShuffle) delete chart.rosterShuffle[key];
+  if(chart.seatRankSettings) delete chart.seatRankSettings[key];
+  refreshCustomGroupList();
+  if(rosterPanelOpen) refreshRosterSectionSelect();
+  render();
+}
+
 function refreshCustomGroupList(){
   const listEl = document.getElementById('customGroupList');
   const sectionEl = document.getElementById('customGroupSection');
@@ -5873,8 +6045,7 @@ function refreshCustomGroupList(){
     delBtn.textContent = '✕'; delBtn.className = 'danger';
     delBtn.onclick = ()=>{
       pushHistory();
-      chart.groups = chart.groups.filter(x=>x.id !== g.id);
-      refreshCustomGroupList();
+      deleteCustomGroup(g.id);
     };
     row.appendChild(nameSpan);
     row.appendChild(delBtn);
@@ -5904,8 +6075,7 @@ function refreshCustomGroupList(){
   delBtn.textContent = '✕'; delBtn.className = 'danger';
   delBtn.onclick = ()=>{
     pushHistory();
-    chart.groups = chart.groups.filter(x=>x.id !== select.value);
-    refreshCustomGroupList();
+    deleteCustomGroup(select.value);
   };
   row.appendChild(select);
   row.appendChild(selectBtn);
@@ -5921,6 +6091,11 @@ document.getElementById('saveAsGroupBtn').onclick = ()=>{
     if(!Array.isArray(chart.groups)) chart.groups = [];
     chart.groups.push({ id: uid(), name, seatIds: selectedIds });
     refreshCustomGroupList();
+    // The group is now a roster section in its own right, and it has just taken these
+    // seats away from their instrument sections, so both the panel and the chart's
+    // names need re-deriving.
+    if(rosterPanelOpen) refreshRosterSectionSelect();
+    render();
     toast('Group "'+name+'" saved');
   });
 };
